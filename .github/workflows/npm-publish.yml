@@ -44,4 +44,4 @@ jobs:
       - name: Publish to npm
         run: npm publish --access public # 明确指定公开访问权限
         env:
-          NODE_AUTH_TOKEN: ${{secrets.githubPublishToken}}
+          NODE_AUTH_TOKEN: ${{secrets.NPM_Publish_TOKEN}}
