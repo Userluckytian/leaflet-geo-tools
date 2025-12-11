@@ -1,0 +1,43 @@
+{
+  "name": "leaflet-geo-tools",
+  "version": "0.1.0",
+  "description": "Enhanced GIS tools for Leaflet",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "unpkg": "dist/index.js",
+  "jsdelivr": "dist/index.js",
+  "types": "dist/types/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "rollup -c -w",
+    "clean": "rimraf dist",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "keywords": [
+    "leaflet",
+    "gis",
+    "draw",
+    "edit",
+    "measure",
+    "topology"
+  ],
+  "author": "zhuzhu",
+  "license": "MIT",
+  "dependencies": {
+    "@turf/turf": "^7.3.1",
+    "@types/leaflet": "^1.9.21",
+    "leaflet": "^1.9.4"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^29.0.0",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-typescript": "^12.3.0",
+    "rimraf": "^6.1.2",
+    "rollup": "^2.79.2",
+    "rollup-plugin-terser": "^7.0.2",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Leaflet Geo Tools - Marker 测试</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body {
+            margin: 20px;
+            font-family: Arial, sans-serif;
+        }
+        #map {
+            height: 500px;
+            margin-top: 20px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+        }
+        .toolbar {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #007acc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #005fa3;
+        }
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+        #log {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            min-height: 100px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            max-height: 300px;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            background: #e6f7ff;
+            border-left: 4px solid #007acc;
+            border-radius: 4px;
+        }
+        .marker-list {
+            margin-top: 10px;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+        }
+        .marker-item {
+            padding: 5px;
+            margin: 2px 0;
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Leaflet Geo Tools - Marker 测试</h1>
+    
+    <div class="status" id="status">状态: 准备就绪</div>
+    
+    <div class="toolbar">
+        <h3>Marker 测试</h3>
+        <button id="drawMarker">📍 开始绘制 Marker</button>
+        <button id="stopDrawing" disabled>🛑 停止绘制</button>
+        <button id="clearAll">🧹 清除所有 Marker</button>
+        <button id="exportMarkers">📋 导出所有 Marker</button>
+    </div>
+    
+    <div id="map"></div>
+    
+    <div class="toolbar">
+        <h4>已创建的 Marker 列表</h4>
+        <div id="markerList" class="marker-list"></div>
+    </div>
+    
+    <div id="log"></div>
+    
+    <!-- 依赖库 -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/@turf/turf@7/turf.min.js"></script>
+    
+    <!-- 你的库 -->
+    <!-- 注意：这里需要根据你的实际构建结果调整路径 -->
+    <script src="../../dist/index.js"></script>
+
+    
+    <script>
+        // 检查库是否加载成功
+        console.log('检查全局变量:', window.LeafletGeoTools);
+        
+        // 获取库的引用
+        const GeoTools = window.LeafletGeoTools;
+        
+        if (!GeoTools) {
+            alert('错误: LeafletGeoTools 库未加载成功！请检查：\n1. 是否正确构建了 dist/index.js\n2. 路径是否正确\n3. 控制台查看错误信息');
+            console.error('可用的全局变量:', Object.keys(window));
+        } else {
+            console.log('库加载成功！可用的类:', Object.keys(GeoTools));
+        }
+        
+        // 初始化地图
+        const map = L.map('map').setView([31.2304, 121.4737], 13); // 上海坐标
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        
+        // 状态跟踪
+        let currentEditor = null;
+        const markers = []; // 存储所有创建的 marker 实例
+        
+        // DOM 元素
+        const statusEl = document.getElementById('status');
+        const logEl = document.getElementById('log');
+        const markerListEl = document.getElementById('markerList');
+        
+        // 日志函数
+        function log(message) {
+            const time = new Date().toLocaleTimeString();
+            logEl.innerHTML += `[${time}] ${message}\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+        
+        // 更新状态
+        function updateStatus(message) {
+            statusEl.textContent = `状态: ${message}`;
+            log(message);
+        }
+        
+        // 更新 marker 列表显示
+        function updateMarkerList() {
+            markerListEl.innerHTML = '';
+            markers.forEach((marker, index) => {
+                const item = document.createElement('div');
+                item.className = 'marker-item';
+                item.innerHTML = `
+                    Marker ${index + 1} 
+                    <button onclick="removeMarker(${index})" style="padding:2px 8px;margin-left:10px;font-size:10px;">删除</button>
+                    <button onclick="viewMarker(${index})" style="padding:2px 8px;margin-left:5px;font-size:10px;">查看</button>
+                `;
+                markerListEl.appendChild(item);
+            });
+        }
+        
+        // 删除 marker
+        window.removeMarker = function(index) {
+            if (markers[index]) {
+                try {
+                    if (markers[index].destroy) markers[index].destroy();
+                    else if (markers[index].remove) markers[index].remove();
+                    markers.splice(index, 1);
+                    updateStatus(`已删除 Marker ${index + 1}`);
+                    updateMarkerList();
+                } catch (error) {
+                    updateStatus(`删除失败: ${error.message}`);
+                }
+            }
+        };
+        
+        // 查看 marker
+        window.viewMarker = function(index) {
+            if (markers[index] && markers[index].geojson) {
+                try {
+                    const geojson = markers[index].geojson();
+                    log(`Marker ${index + 1} 的坐标: ${JSON.stringify(geojson)}`);
+                    map.setView([geojson.geometry.coordinates[1], geojson.geometry.coordinates[0]], 15);
+                } catch (error) {
+                    updateStatus(`获取坐标失败: ${error.message}`);
+                }
+            }
+        };
+        
+        // 绘制 Marker 按钮点击事件
+        document.getElementById('drawMarker').addEventListener('click', function() {
+            if (!GeoTools) {
+                updateStatus('错误: 库未加载');
+                return;
+            }
+            
+            // 尝试不同的类名
+            const MarkerClass = GeoTools.LeafletMarkerEditor || 
+                               GeoTools.MarkerPointEditor || 
+                               GeoTools.MarkerPoint ||
+                               GeoTools.default?.LeafletMarkerEditor;
+            
+            if (!MarkerClass) {
+                updateStatus('错误: 未找到 Marker 编辑器类');
+                log('可用的类: ' + Object.keys(GeoTools).join(', '));
+                return;
+            }
+            
+            // 清理当前的编辑器
+            if (currentEditor) {
+                try {
+                    if (currentEditor.exitEditMode) currentEditor.exitEditMode();
+                    if (currentEditor.destroy) currentEditor.destroy();
+                } catch (error) {
+                    // 忽略错误
+                }
+            }
+            
+            try {
+                updateStatus('开始绘制 Marker - 请在地图上点击添加标记');
+                
+                // 创建新的 Marker 编辑器
+                currentEditor = new MarkerClass(map);
+                markers.push(currentEditor);
+                
+                // 监听状态变化
+                if (currentEditor.onStateChange) {
+                    currentEditor.onStateChange((state) => {
+                        updateStatus(`Marker 状态: ${state}`);
+                        
+                        if (state === 'idle' || state === 'Idle') {
+                            // 绘制完成
+                            document.getElementById('stopDrawing').disabled = true;
+                            document.getElementById('drawMarker').disabled = false;
+                            updateStatus('Marker 绘制完成');
+                            
+                            // 获取坐标
+                            if (currentEditor.geojson) {
+                                const geojson = currentEditor.geojson();
+                                log(`新的 Marker 坐标: ${JSON.stringify(geojson.geometry.coordinates)}`);
+                            }
+                            
+                            currentEditor = null;
+                            updateMarkerList();
+                        } else if (state === 'drawing' || state === 'Drawing') {
+                            // 正在绘制
+                            document.getElementById('stopDrawing').disabled = false;
+                            document.getElementById('drawMarker').disabled = true;
+                        }
+                    });
+                }
+                
+                // 更新 UI
+                document.getElementById('stopDrawing').disabled = false;
+                document.getElementById('drawMarker').disabled = true;
+                
+                log(`Marker 编辑器已创建，类名: ${MarkerClass.name}`);
+                
+            } catch (error) {
+                updateStatus(`创建 Marker 编辑器失败: ${error.message}`);
+                log(`错误详情: ${error.stack}`);
+                currentEditor = null;
+            }
+        });
+        
+        // 停止绘制
+        document.getElementById('stopDrawing').addEventListener('click', function() {
+            if (currentEditor) {
+                try {
+                    if (currentEditor.exitEditMode) currentEditor.exitEditMode();
+                    if (currentEditor.destroy) currentEditor.destroy();
+                    updateStatus('已停止绘制');
+                } catch (error) {
+                    updateStatus(`停止绘制失败: ${error.message}`);
+                }
+                currentEditor = null;
+            }
+            
+            document.getElementById('stopDrawing').disabled = true;
+            document.getElementById('drawMarker').disabled = false;
+        });
+        
+        // 清除所有
+        document.getElementById('clearAll').addEventListener('click', function() {
+            markers.forEach(marker => {
+                try {
+                    if (marker.destroy) marker.destroy();
+                    else if (marker.remove) marker.remove();
+                } catch (error) {
+                    // 忽略错误
+                }
+            });
+            
+            markers.length = 0;
+            currentEditor = null;
+            
+            updateStatus('已清除所有 Marker');
+            updateMarkerList();
+            document.getElementById('stopDrawing').disabled = true;
+            document.getElementById('drawMarker').disabled = false;
+        });
+        
+        // 导出所有 Marker
+        document.getElementById('exportMarkers').addEventListener('click', function() {
+            log('=== 所有 Marker 的 GeoJSON 数据 ===');
+            
+            if (markers.length === 0) {
+                log('没有 Marker 数据');
+                return;
+            }
+            
+            markers.forEach((marker, index) => {
+                if (marker.geojson) {
+                    try {
+                        const geojson = marker.geojson();
+                        log(`Marker ${index + 1}:`);
+                        log(JSON.stringify(geojson, null, 2));
+                    } catch (error) {
+                        log(`获取 Marker ${index + 1} 数据失败: ${error.message}`);
+                    }
+                } else {
+                    log(`Marker ${index + 1}: 没有 geojson() 方法`);
+                }
+            });
+        });
+        
+        // 初始化日志
+        log('Leaflet Geo Tools Marker 测试页面已加载');
+        log('地图中心: [31.2304, 121.4737] (上海)');
+        log('等待用户操作...');
+        
+        // 添加一些测试 Marker
+        setTimeout(() => {
+            if (GeoTools) {
+                log('库已加载，可以开始测试');
+                updateStatus('就绪 - 点击"开始绘制 Marker"按钮开始测试');
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Leaflet Geo Tools Demo</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body {
+            margin: 20px;
+            font-family: Arial, sans-serif;
+        }
+        #map { 
+            height: 500px; 
+            margin-top: 20px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+        }
+        .toolbar {
+            margin: 15px 0;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #007acc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #005fa3;
+        }
+        button.active {
+            background: #ff6b6b;
+        }
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+        #log {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 5px;
+            min-height: 100px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 5px 10px;
+            background: #e6f7ff;
+            border-left: 4px solid #007acc;
+        }
+    </style>
+</head>
+<body>
+    <h1>Leaflet Geo Tools Demo</h1>
+    
+    <div class="status" id="status">状态: 准备就绪</div>
+    
+    <div class="toolbar">
+        <h3>绘制工具</h3>
+        <button id="drawMarker">📍 绘制 Marker</button>
+        <button id="drawPolyline">📏 绘制折线</button>
+        <button id="drawPolygon">🔷 绘制多边形</button>
+        <button id="drawRectangle">⬜ 绘制矩形</button>
+        <button id="drawCircle">⭕ 绘制圆形</button>
+        <button id="stopDrawing" disabled>🛑 停止绘制</button>
+    </div>
+    
+    <div class="toolbar">
+        <h3>测量工具</h3>
+        <button id="measureDistance">📐 测量距离</button>
+        <button id="measureArea">📏 测量面积</button>
+        <button id="stopMeasure" disabled>🛑 停止测量</button>
+    </div>
+    
+    <div class="toolbar">
+        <h3>编辑工具</h3>
+        <button id="clearAll">🧹 清除所有</button>
+        <button id="logFeatures">📄 输出 GeoJSON</button>
+    </div>
+    
+    <div id="map"></div>
+    
+    <div id="log"></div>
+    
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- 这里假设你的库暴露为全局变量 LeafletGeoTools -->
+    <!-- 如果还没有，我们可以稍后修改 -->
+    <script src="../dist/index.js"></script>
+    
+    <script>
+        // 初始化地图
+        const map = L.map('map').setView([51.505, -0.09], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        
+        // 全局变量来跟踪当前激活的编辑器
+        let currentEditor = null;
+        let editors = []; // 存储所有编辑器实例
+        
+        // 获取 DOM 元素
+        const statusEl = document.getElementById('status');
+        const logEl = document.getElementById('log');
+        
+        // 更新状态显示
+        function updateStatus(message) {
+            statusEl.textContent = `状态: ${message}`;
+            log(message);
+        }
+        
+        // 日志函数
+        function log(message) {
+            const time = new Date().toLocaleTimeString();
+            logEl.innerHTML += `[${time}] ${message}\n`;
+            logEl.scrollTop = logEl.scrollHeight; // 自动滚动到底部
+        }
+        
+        // 清理函数
+        function cleanupCurrentEditor() {
+            if (currentEditor) {
+                try {
+                    // 停止当前编辑器的活动
+                    if (currentEditor.exitEditMode) currentEditor.exitEditMode();
+                    if (currentEditor.destroy) currentEditor.destroy();
+                    updateStatus(`已停止 ${currentEditor.constructor.name}`);
+                } catch (error) {
+                    log(`清理编辑器时出错: ${error.message}`);
+                }
+                currentEditor = null;
+            }
+            
+            // 更新按钮状态
+            document.getElementById('stopDrawing').disabled = true;
+            document.getElementById('stopMeasure').disabled = true;
+            
+            // 移除所有按钮的 active 类
+            document.querySelectorAll('button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+        }
+        
+        // 检查是否导出了全局变量
+        function checkLibrary() {
+            // 尝试不同的可能导出的全局变量名
+            const library = window.LeafletGeoTools || window.leafletGeoTools || window.geoTools;
+            
+            if (!library) {
+                updateStatus("错误: 未找到 Leaflet Geo Tools 库。请确保 dist/index.js 已正确构建。");
+                console.error('全局变量未找到。请检查：');
+                console.error('1. 是否运行了 npm run build?');
+                console.error('2. 打包配置是否设置了正确的全局变量名?');
+                console.error('3. 当前可用的全局变量:', Object.keys(window).filter(k => k.includes('Leaflet') || k.includes('leaflet')));
+                return null;
+            }
+            
+            updateStatus(`库已加载: ${Object.keys(library).length} 个导出项`);
+            console.log('可用的导出:', Object.keys(library));
+            return library;
+        }
+        
+        // 绘制 Marker
+        document.getElementById('drawMarker').addEventListener('click', async () => {
+            cleanupCurrentEditor();
+            
+            const lib = checkLibrary();
+            if (!lib) return;
+            
+            try {
+                // 注意：你可能需要根据实际的类名调整
+                // 例如：lib.LeafletMarkerEditor 或 lib.MarkerEditor
+                const MarkerClass = lib.LeafletMarkerEditor || lib.MarkerPointEditor || lib.default?.LeafletMarkerEditor;
+                
+                if (!MarkerClass) {
+                    updateStatus("错误: 未找到 Marker 编辑器类");
+                    log("可用的类: " + Object.keys(lib).filter(k => k.includes('Marker') || k.includes('marker')).join(', '));
+                    return;
+                }
+                
+                updateStatus("开始绘制 Marker - 请在地图上点击添加标记");
+                currentEditor = new MarkerClass(map);
+                editors.push(currentEditor);
+                
+                // 监听状态变化
+                if (currentEditor.onStateChange) {
+                    currentEditor.onStateChange((state) => {
+                        updateStatus(`Marker 编辑器状态: ${state}`);
+                        if (state === 'idle' || state === 'Idle') {
+                            document.getElementById('stopDrawing').disabled = true;
+                            document.getElementById('drawMarker').classList.remove('active');
+                            updateStatus("Marker 绘制完成");
+                        }
+                    });
+                }
+                
+                // 更新 UI
+                document.getElementById('stopDrawing').disabled = false;
+                document.getElementById('drawMarker').classList.add('active');
+                
+                log("Marker 编辑器已启动");
+                
+            } catch (error) {
+                updateStatus(`错误: ${error.message}`);
+                log(`创建 Marker 编辑器失败: ${error.stack}`);
+            }
+        });
+        
+        // 绘制多边形
+        document.getElementById('drawPolygon').addEventListener('click', async () => {
+            cleanupCurrentEditor();
+            
+            const lib = checkLibrary();
+            if (!lib) return;
+            
+            try {
+                const PolygonClass = lib.LeafletPolygonEditor || lib.PolygonEditor || lib.default?.LeafletPolygonEditor;
+                
+                if (!PolygonClass) {
+                    updateStatus("错误: 未找到多边形编辑器类");
+                    log("可用的类: " + Object.keys(lib).filter(k => k.includes('Polygon') || k.includes('polygon')).join(', '));
+                    return;
+                }
+                
+                updateStatus("开始绘制多边形 - 点击添加顶点，双击完成绘制");
+                currentEditor = new PolygonClass(map);
+                editors.push(currentEditor);
+                
+                // 监听状态变化
+                if (currentEditor.onStateChange) {
+                    currentEditor.onStateChange((state) => {
+                        updateStatus(`多边形编辑器状态: ${state}`);
+                        if (state === 'idle' || state === 'Idle') {
+                            document.getElementById('stopDrawing').disabled = true;
+                            document.getElementById('drawPolygon').classList.remove('active');
+                            updateStatus("多边形绘制完成");
+                            
+                            // 输出 GeoJSON
+                            if (currentEditor.geojson) {
+                                const geojson = currentEditor.geojson();
+                                log(`多边形 GeoJSON: ${JSON.stringify(geojson, null, 2)}`);
+                            }
+                        }
+                    });
+                }
+                
+                // 更新 UI
+                document.getElementById('stopDrawing').disabled = false;
+                document.getElementById('drawPolygon').classList.add('active');
+                
+                log("多边形编辑器已启动");
+                
+            } catch (error) {
+                updateStatus(`错误: ${error.message}`);
+                log(`创建多边形编辑器失败: ${error.stack}`);
+            }
+        });
+        
+        // 绘制矩形
+        document.getElementById('drawRectangle').addEventListener('click', async () => {
+            cleanupCurrentEditor();
+            
+            const lib = checkLibrary();
+            if (!lib) return;
+            
+            try {
+                const RectangleClass = lib.LeafletRectangleEditor || lib.RectangleEditor || lib.default?.LeafletRectangleEditor;
+                
+                if (!RectangleClass) {
+                    updateStatus("错误: 未找到矩形编辑器类");
+                    log("可用的类: " + Object.keys(lib).filter(k => k.includes('Rectangle') || k.includes('rectangle')).join(', '));
+                    return;
+                }
+                
+                updateStatus("开始绘制矩形 - 点击并拖动绘制");
+                currentEditor = new RectangleClass(map);
+                editors.push(currentEditor);
+                
+                if (currentEditor.onStateChange) {
+                    currentEditor.onStateChange((state) => {
+                        updateStatus(`矩形编辑器状态: ${state}`);
+                        if (state === 'idle' || state === 'Idle') {
+                            document.getElementById('stopDrawing').disabled = true;
+                            document.getElementById('drawRectangle').classList.remove('active');
+                            updateStatus("矩形绘制完成");
+                        }
+                    });
+                }
+                
+                document.getElementById('stopDrawing').disabled = false;
+                document.getElementById('drawRectangle').classList.add('active');
+                log("矩形编辑器已启动");
+                
+            } catch (error) {
+                updateStatus(`错误: ${error.message}`);
+                log(`创建矩形编辑器失败: ${error.stack}`);
+            }
+        });
+        
+        // 测量距离
+        document.getElementById('measureDistance').addEventListener('click', async () => {
+            cleanupCurrentEditor();
+            
+            const lib = checkLibrary();
+            if (!lib) return;
+            
+            try {
+                const DistanceClass = lib.LeafletDistanceMeasure || lib.DistanceMeasure || lib.measure?.distance || lib.default?.LeafletDistanceMeasure;
+                
+                if (!DistanceClass) {
+                    updateStatus("错误: 未找到距离测量类");
+                    return;
+                }
+                
+                updateStatus("开始测量距离 - 点击添加测量点，双击完成");
+                currentEditor = new DistanceClass(map);
+                editors.push(currentEditor);
+                
+                if (currentEditor.onStateChange) {
+                    currentEditor.onStateChange((state) => {
+                        updateStatus(`距离测量状态: ${state}`);
+                        if (state === 'idle' || state === 'Idle') {
+                            document.getElementById('stopMeasure').disabled = true;
+                            document.getElementById('measureDistance').classList.remove('active');
+                            updateStatus("距离测量完成");
+                        }
+                    });
+                }
+                
+                document.getElementById('stopMeasure').disabled = false;
+                document.getElementById('measureDistance').classList.add('active');
+                log("距离测量已启动");
+                
+            } catch (error) {
+                updateStatus(`错误: ${error.message}`);
+                log(`启动距离测量失败: ${error.stack}`);
+            }
+        });
+        
+        // 测量面积
+        document.getElementById('measureArea').addEventListener('click', async () => {
+            cleanupCurrentEditor();
+            
+            const lib = checkLibrary();
+            if (!lib) return;
+            
+            try {
+                const AreaClass = lib.LeafletAreaMeasure || lib.AreaMeasure || lib.measure?.area || lib.default?.LeafletAreaMeasure;
+                
+                if (!AreaClass) {
+                    updateStatus("错误: 未找到面积测量类");
+                    return;
+                }
+                
+                updateStatus("开始测量面积 - 点击添加顶点，双击完成");
+                currentEditor = new AreaClass(map);
+                editors.push(currentEditor);
+                
+                if (currentEditor.onStateChange) {
+                    currentEditor.onStateChange((state) => {
+                        updateStatus(`面积测量状态: ${state}`);
+                        if (state === 'idle' || state === 'Idle') {
+                            document.getElementById('stopMeasure').disabled = true;
+                            document.getElementById('measureArea').classList.remove('active');
+                            updateStatus("面积测量完成");
+                        }
+                    });
+                }
+                
+                document.getElementById('stopMeasure').disabled = false;
+                document.getElementById('measureArea').classList.add('active');
+                log("面积测量已启动");
+                
+            } catch (error) {
+                updateStatus(`错误: ${error.message}`);
+                log(`启动面积测量失败: ${error.stack}`);
+            }
+        });
+        
+        // 停止绘制/测量
+        document.getElementById('stopDrawing').addEventListener('click', () => {
+            cleanupCurrentEditor();
+            updateStatus("已停止当前绘制操作");
+        });
+        
+        document.getElementById('stopMeasure').addEventListener('click', () => {
+            cleanupCurrentEditor();
+            updateStatus("已停止当前测量操作");
+        });
+        
+        // 清除所有
+        document.getElementById('clearAll').addEventListener('click', () => {
+            editors.forEach(editor => {
+                try {
+                    if (editor.destroy) editor.destroy();
+                    else if (editor.remove) editor.remove();
+                } catch (error) {
+                    // 忽略清理错误
+                }
+            });
+            
+            editors = [];
+            cleanupCurrentEditor();
+            updateStatus("已清除所有图层");
+            log("所有图层已清除");
+        });
+        
+        // 输出 GeoJSON
+        document.getElementById('logFeatures').addEventListener('click', () => {
+            log("=== 当前所有要素的 GeoJSON ===");
+            
+            editors.forEach((editor, index) => {
+                if (editor.geojson) {
+                    try {
+                        const geojson = editor.geojson();
+                        log(`要素 ${index + 1} (${editor.constructor?.name || '未知'}):`);
+                        log(JSON.stringify(geojson, null, 2));
+                    } catch (error) {
+                        log(`获取要素 ${index + 1} 的 GeoJSON 失败: ${error.message}`);
+                    }
+                }
+            });
+            
+            if (editors.length === 0) {
+                log("没有可输出的要素");
+            }
+        });
+        
+        // 初始日志
+        updateStatus("页面加载完成，点击按钮开始测试");
+        log("Leaflet Geo Tools 测试页面已加载");
+        log("地图中心: [51.505, -0.09], 缩放级别: 13");
+        
+        // 检查库是否加载成功
+        setTimeout(() => {
+            const lib = checkLibrary();
+            if (lib) {
+                log("库加载成功！");
+            }
+        }, 1000);
+        
+    </script>
+</body>
+</html>

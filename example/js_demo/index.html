@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Leaflet Geo Tools Demo</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        #map {
+            height: 500px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Leaflet Geo Tools Demo - 1</h1>
+    <button id="drawMarker">绘制marker标记</button>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/@turf/turf@7/turf.min.js"></script>
+    <!-- 这里将使用你打包后的库 -->
+    <!-- 当用户通过 CDN 使用时：用户需要先引入 Leaflet 和 Turf，然后引入你的库 -->
+    <script src="https://unpkg.com/leaflet-geo-tools@0.1.0/dist/index.js"></script>
+
+    <script>
+        // 初始化地图
+        var map = L.map('map').setView([51.505, -0.09], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+        // 绘制 Marker
+        document.getElementById('drawMarker').addEventListener('click', async () => {
+
+            const currentEditor = new MarkerPoint(map);
+
+            // 监听状态变化
+            if (currentEditor.onStateChange) {
+                currentEditor.onStateChange((state) => {
+                    updateStatus(`Marker 编辑器状态: ${state}`);
+                    if (state === 'idle' || state === 'Idle') {
+                        updateStatus("Marker 绘制完成");
+                    }
+                });
+            }
+
+            log("Marker 编辑器已启动");
+
+        });
+
+    </script>
+</body>
+
+</html>
