@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Leaflet Geo Tools - Marker 测试</title>
+    <title>Leaflet Geo Tools - 完整绘制演示</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         body {
@@ -9,7 +9,7 @@
             font-family: Arial, sans-serif;
         }
         #map {
-            height: 500px;
+            height: 600px;
             margin-top: 20px;
             border: 2px solid #ddd;
             border-radius: 5px;
@@ -20,6 +20,14 @@
             background: #f5f5f5;
             border-radius: 5px;
         }
+        .toolbar-group {
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #ccc;
+        }
+        .toolbar-group:last-child {
+            border-bottom: none;
+        }
         button {
             padding: 10px 20px;
             margin: 5px;
@@ -29,9 +37,13 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 14px;
+            min-width: 120px;
         }
         button:hover {
             background: #005fa3;
+        }
+        button.active {
+            background: #ff6b6b;
         }
         button:disabled {
             background: #cccccc;
@@ -47,7 +59,7 @@
             font-size: 12px;
             white-space: pre-wrap;
             overflow-y: auto;
-            max-height: 300px;
+            max-height: 400px;
         }
         .status {
             margin: 10px 0;
@@ -56,38 +68,65 @@
             border-left: 4px solid #007acc;
             border-radius: 4px;
         }
-        .marker-list {
+        .feature-list {
             margin-top: 10px;
             border-top: 1px solid #ddd;
             padding-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
         }
-        .marker-item {
-            padding: 5px;
-            margin: 2px 0;
+        .feature-item {
+            padding: 8px;
+            margin: 5px 0;
             background: #fff;
             border: 1px solid #eee;
             border-radius: 3px;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .feature-actions button {
+            padding: 3px 8px;
+            font-size: 11px;
+            margin-left: 5px;
+            min-width: auto;
         }
     </style>
 </head>
 <body>
-    <h1>Leaflet Geo Tools - Marker 测试</h1>
+    <h1>Leaflet Geo Tools - 完整绘制演示</h1>
     
     <div class="status" id="status">状态: 准备就绪</div>
     
     <div class="toolbar">
-        <h3>Marker 测试</h3>
-        <button id="drawMarker">📍 开始绘制 Marker</button>
-        <button id="stopDrawing" disabled>🛑 停止绘制</button>
-        <button id="clearAll">🧹 清除所有 Marker</button>
-        <button id="exportMarkers">📋 导出所有 Marker</button>
+        <div class="toolbar-group">
+            <h3>📝 绘制工具</h3>
+            <button id="drawMarker">📍 点 (Marker)</button>
+            <button id="drawPolyline">📏 线 (Polyline)</button>
+            <button id="drawPolygon">🔷 多边形 (Polygon)</button>
+            <button id="drawRectangle">⬜ 矩形 (Rectangle)</button>
+            <button id="drawCircle">⭕ 圆形 (Circle)</button>
+        </div>
+        
+        <div class="toolbar-group">
+            <h3>🛠️ 操作控制</h3>
+            <button id="stopDrawing" disabled>🛑 停止绘制</button>
+            <button id="clearAll">🧹 清除所有</button>
+            <button id="toggleView">🗺️ 居中显示</button>
+        </div>
+        
+        <div class="toolbar-group">
+            <h3>💾 数据操作</h3>
+            <button id="exportAll">📋 导出所有数据 (GeoJSON)</button>
+        </div>
     </div>
     
     <div id="map"></div>
     
     <div class="toolbar">
-        <h4>已创建的 Marker 列表</h4>
-        <div id="markerList" class="marker-list"></div>
+        <h4>已创建要素列表</h4>
+        <div id="featureList" class="feature-list"></div>
     </div>
     
     <div id="log"></div>
@@ -97,9 +136,7 @@
     <script src="https://unpkg.com/@turf/turf@7/turf.min.js"></script>
     
     <!-- 你的库 -->
-    <!-- 注意：这里需要根据你的实际构建结果调整路径 -->
     <script src="../../dist/index.js"></script>
-
     
     <script>
         // 检查库是否加载成功
@@ -116,24 +153,26 @@
         }
         
         // 初始化地图
-        const map = L.map('map').setView([31.2304, 121.4737], 13); // 上海坐标
+        const map = L.map('map').setView([31.2304, 121.4737], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
         
-        // 状态跟踪
+        // 状态管理
         let currentEditor = null;
-        const markers = []; // 存储所有创建的 marker 实例
+        const features = []; // 存储所有创建的要素实例
+        let activeMode = null; // 当前激活的绘制模式
         
         // DOM 元素
         const statusEl = document.getElementById('status');
         const logEl = document.getElementById('log');
-        const markerListEl = document.getElementById('markerList');
+        const featureListEl = document.getElementById('featureList');
         
         // 日志函数
-        function log(message) {
+        function log(message, type = 'info') {
             const time = new Date().toLocaleTimeString();
-            logEl.innerHTML += `[${time}] ${message}\n`;
+            const prefix = type === 'error' ? '❌ ' : type === 'success' ? '✅ ' : 'ℹ️ ';
+            logEl.innerHTML += `[${time}] ${prefix}${message}\n`;
             logEl.scrollTop = logEl.scrollHeight;
         }
         
@@ -143,196 +182,291 @@
             log(message);
         }
         
-        // 更新 marker 列表显示
-        function updateMarkerList() {
-            markerListEl.innerHTML = '';
-            markers.forEach((marker, index) => {
+        // 更新要素列表显示
+        function updateFeatureList() {
+            featureListEl.innerHTML = '';
+            features.forEach((feature, index) => {
                 const item = document.createElement('div');
-                item.className = 'marker-item';
+                item.className = 'feature-item';
+                
+                // 获取要素类型
+                let type = '未知';
+                if (feature.constructor.name.includes('Marker')) type = '点';
+                else if (feature.constructor.name.includes('Polyline')) type = '线';
+                else if (feature.constructor.name.includes('Polygon')) type = '多边形';
+                else if (feature.constructor.name.includes('Rectangle')) type = '矩形';
+                else if (feature.constructor.name.includes('Circle')) type = '圆形';
+                
                 item.innerHTML = `
-                    Marker ${index + 1} 
-                    <button onclick="removeMarker(${index})" style="padding:2px 8px;margin-left:10px;font-size:10px;">删除</button>
-                    <button onclick="viewMarker(${index})" style="padding:2px 8px;margin-left:5px;font-size:10px;">查看</button>
+                    <span>${index + 1}. ${type}</span>
+                    <div class="feature-actions">
+                        <button onclick="viewFeature(${index})">查看</button>
+                        <button onclick="removeFeature(${index})">删除</button>
+                    </div>
                 `;
-                markerListEl.appendChild(item);
+                featureListEl.appendChild(item);
             });
         }
         
-        // 删除 marker
-        window.removeMarker = function(index) {
-            if (markers[index]) {
+        // 全局函数 - 查看要素
+        window.viewFeature = function(index) {
+            if (features[index] && features[index].geojson) {
                 try {
-                    if (markers[index].destroy) markers[index].destroy();
-                    else if (markers[index].remove) markers[index].remove();
-                    markers.splice(index, 1);
-                    updateStatus(`已删除 Marker ${index + 1}`);
-                    updateMarkerList();
+                    const geojson = features[index].geojson();
+                    log(`查看 ${features[index].constructor.name} ${index + 1}:`);
+                    log(JSON.stringify(geojson, null, 2), 'info');
+                    
+                    // 定位到要素
+                    if (geojson.geometry.type === 'Point') {
+                        map.setView([geojson.geometry.coordinates[1], geojson.geometry.coordinates[0]], 16);
+                    } else {
+                        // 对于面和线，计算边界
+                        const bounds = L.geoJSON(geojson).getBounds();
+                        map.fitBounds(bounds, { padding: [50, 50] });
+                    }
                 } catch (error) {
-                    updateStatus(`删除失败: ${error.message}`);
+                    log(`获取要素坐标失败: ${error.message}`, 'error');
                 }
             }
         };
         
-        // 查看 marker
-        window.viewMarker = function(index) {
-            if (markers[index] && markers[index].geojson) {
+        // 全局函数 - 删除要素
+        window.removeFeature = function(index) {
+            if (features[index]) {
                 try {
-                    const geojson = markers[index].geojson();
-                    log(`Marker ${index + 1} 的坐标: ${JSON.stringify(geojson)}`);
-                    map.setView([geojson.geometry.coordinates[1], geojson.geometry.coordinates[0]], 15);
+                    if (features[index].destroy) features[index].destroy();
+                    
+                    features.splice(index, 1);
+                    updateStatus(`已删除要素 ${index + 1}`);
+                    updateFeatureList();
                 } catch (error) {
-                    updateStatus(`获取坐标失败: ${error.message}`);
+                    log(`删除失败: ${error.message}`, 'error');
                 }
             }
         };
         
-        // 绘制 Marker 按钮点击事件
-        document.getElementById('drawMarker').addEventListener('click', function() {
+        // 禁用/启用所有绘制按钮
+        function disableAllButtons(disabled) {
+            ['drawMarker', 'drawPolyline', 'drawPolygon', 'drawRectangle', 'drawCircle']
+                .forEach(id => {
+                    const btn = document.getElementById(id);
+                    if (btn) btn.disabled = disabled;
+                });
+            
+            document.getElementById('stopDrawing').disabled = !disabled;
+        }
+        
+        // 清除当前编辑器的激活状态
+        function deactivateCurrentEditor() {
+            if (currentEditor) {
+                try {
+                    if (currentEditor.destroy) currentEditor.destroy();
+                } catch (error) {
+                    // 忽略错误
+                }
+                currentEditor = null;
+            }
+            disableAllButtons(false);
+            updateStatus('已停止当前操作');
+        }
+        
+        // 通用绘制函数
+        function startDrawing(editorClass, modeName, buttonId) {
+            console.log('geo', GeoTools);
+            
             if (!GeoTools) {
                 updateStatus('错误: 库未加载');
                 return;
             }
             
-            // 尝试不同的类名
-            const MarkerClass = GeoTools.LeafletMarkerEditor || 
-                               GeoTools.MarkerPointEditor || 
-                               GeoTools.MarkerPoint ||
-                               GeoTools.default?.LeafletMarkerEditor;
+            // 查找编辑器类
+            const EditorClass = GeoTools[editorClass];
             
-            if (!MarkerClass) {
-                updateStatus('错误: 未找到 Marker 编辑器类');
-                log('可用的类: ' + Object.keys(GeoTools).join(', '));
+            if (!EditorClass) {
+                updateStatus(`错误: 未找到 ${modeName} 编辑器类`);
+                log('可用的类: ' + Object.keys(GeoTools).join(', '), 'error');
                 return;
             }
             
-            // 清理当前的编辑器
-            if (currentEditor) {
-                try {
-                    if (currentEditor.exitEditMode) currentEditor.exitEditMode();
-                    if (currentEditor.destroy) currentEditor.destroy();
-                } catch (error) {
-                    // 忽略错误
-                }
-            }
+            deactivateCurrentEditor();
             
             try {
-                updateStatus('开始绘制 Marker - 请在地图上点击添加标记');
+                updateStatus(`开始绘制 ${modeName} - ${getDrawingInstructions(modeName)}`);
                 
-                // 创建新的 Marker 编辑器
-                currentEditor = new MarkerClass(map);
-                markers.push(currentEditor);
+                // 创建新的编辑器
+                currentEditor = new EditorClass(map);
+                features.push(currentEditor);
+                activeMode = modeName;
                 
                 // 监听状态变化
                 if (currentEditor.onStateChange) {
                     currentEditor.onStateChange((state) => {
-                        updateStatus(`Marker 状态: ${state}`);
+                        updateStatus(`${modeName} 状态: ${state}`);
                         
-                        if (state === 'idle' || state === 'Idle') {
+                        if (state === GeoTools.PolygonEditorState.Idle) {
                             // 绘制完成
-                            document.getElementById('stopDrawing').disabled = true;
-                            document.getElementById('drawMarker').disabled = false;
-                            updateStatus('Marker 绘制完成');
+                            disableAllButtons(false);
+                            updateStatus(`${modeName} 绘制完成`);
                             
-                            // 获取坐标
+                            // 获取数据
                             if (currentEditor.geojson) {
                                 const geojson = currentEditor.geojson();
-                                log(`新的 Marker 坐标: ${JSON.stringify(geojson.geometry.coordinates)}`);
+                                log(`新的 ${modeName} 数据:`, 'success');
+                                log(JSON.stringify(geojson, null, 2));
                             }
                             
                             currentEditor = null;
-                            updateMarkerList();
-                        } else if (state === 'drawing' || state === 'Drawing') {
+                            activeMode = null;
+                            updateFeatureList();
+                        } else if (state === GeoTools.PolygonEditorState.Drawing) {
                             // 正在绘制
-                            document.getElementById('stopDrawing').disabled = false;
-                            document.getElementById('drawMarker').disabled = true;
+                            disableAllButtons(true);
                         }
                     });
                 }
                 
-                // 更新 UI
+                // 更新UI
+                document.getElementById(buttonId).classList.add('active');
                 document.getElementById('stopDrawing').disabled = false;
-                document.getElementById('drawMarker').disabled = true;
                 
-                log(`Marker 编辑器已创建，类名: ${MarkerClass.name}`);
+                log(`${modeName} 编辑器已创建，类名: ${EditorClass.name}`, 'success');
                 
             } catch (error) {
-                updateStatus(`创建 Marker 编辑器失败: ${error.message}`);
-                log(`错误详情: ${error.stack}`);
+                updateStatus(`创建 ${modeName} 编辑器失败: ${error.message}`, 'error');
+                log(`错误详情: ${error.stack}`, 'error');
                 currentEditor = null;
+                activeMode = null;
             }
-        });
+        }
+        
+        // 获取绘制说明
+        function getDrawingInstructions(modeName) {
+            const instructions = {
+                '点': '点击地图添加标记',
+                '线': '点击添加顶点，双击结束绘制',
+                '多边形': '点击添加顶点，双击结束绘制',
+                '矩形': '点击并拖动绘制',
+                '圆形': '点击确定圆心，拖动确定半径'
+            };
+            return instructions[modeName] || '请参考对应工具的绘制说明';
+        }
+        
+        // 按钮事件绑定
+        document.getElementById('drawMarker').addEventListener('click', () => 
+            startDrawing('MarkerPoint', '点', 'drawMarker'));
+        
+        document.getElementById('drawPolyline').addEventListener('click', () => 
+            startDrawing('LeafletPolyline', '线', 'drawPolyline'));
+        
+        document.getElementById('drawPolygon').addEventListener('click', () => 
+            startDrawing('LeafletPolygon', '多边形', 'drawPolygon'));
+        
+        document.getElementById('drawRectangle').addEventListener('click', () => 
+            startDrawing('LeafletRectangle', '矩形', 'drawRectangle'));
+        
+        document.getElementById('drawCircle').addEventListener('click', () => 
+            startDrawing('LeafletCircle', '圆形', 'drawCircle'));
         
         // 停止绘制
-        document.getElementById('stopDrawing').addEventListener('click', function() {
-            if (currentEditor) {
-                try {
-                    if (currentEditor.exitEditMode) currentEditor.exitEditMode();
-                    if (currentEditor.destroy) currentEditor.destroy();
-                    updateStatus('已停止绘制');
-                } catch (error) {
-                    updateStatus(`停止绘制失败: ${error.message}`);
-                }
-                currentEditor = null;
-            }
-            
-            document.getElementById('stopDrawing').disabled = true;
-            document.getElementById('drawMarker').disabled = false;
-        });
+        document.getElementById('stopDrawing').addEventListener('click', deactivateCurrentEditor);
         
         // 清除所有
-        document.getElementById('clearAll').addEventListener('click', function() {
-            markers.forEach(marker => {
+        document.getElementById('clearAll').addEventListener('click', () => {
+            features.forEach(feature => {
                 try {
-                    if (marker.destroy) marker.destroy();
-                    else if (marker.remove) marker.remove();
+                    if (feature.destroy) feature.destroy();
                 } catch (error) {
                     // 忽略错误
                 }
             });
             
-            markers.length = 0;
+            features.length = 0;
             currentEditor = null;
+            activeMode = null;
             
-            updateStatus('已清除所有 Marker');
-            updateMarkerList();
-            document.getElementById('stopDrawing').disabled = true;
-            document.getElementById('drawMarker').disabled = false;
+            updateStatus('已清除所有要素');
+            updateFeatureList();
+            disableAllButtons(false);
+            
+            // 移除所有按钮的active状态
+            document.querySelectorAll('button.active').forEach(btn => 
+                btn.classList.remove('active'));
         });
         
-        // 导出所有 Marker
-        document.getElementById('exportMarkers').addEventListener('click', function() {
-            log('=== 所有 Marker 的 GeoJSON 数据 ===');
+        // 居中显示
+        document.getElementById('toggleView').addEventListener('click', () => {
+            if (features.length > 0) {
+                // 计算所有要素的边界
+                let bounds = L.latLngBounds([]);
+                features.forEach(feature => {
+                    if (feature.getLayer) {
+                        const layer = feature.getLayer();
+                        if (layer.getBounds) {
+                            bounds.extend(layer.getBounds());
+                        } else if (layer.getLatLng) {
+                            bounds.extend(layer.getLatLng());
+                        }
+                    }
+                });
+                map.fitBounds(bounds, { padding: [50, 50] });
+            } else {
+                map.setView([31.2304, 121.4737], 13);
+            }
+            updateStatus('地图已居中显示');
+        });
+        
+        // 导出所有数据
+        document.getElementById('exportAll').addEventListener('click', () => {
+            log('=== 所有要素的 GeoJSON 数据 ===', 'info');
             
-            if (markers.length === 0) {
-                log('没有 Marker 数据');
+            if (features.length === 0) {
+                log('没有要素数据', 'info');
                 return;
             }
             
-            markers.forEach((marker, index) => {
-                if (marker.geojson) {
+            const featureCollection = {
+                type: "FeatureCollection",
+                features: []
+            };
+            
+            features.forEach((feature, index) => {
+                if (feature.geojson) {
                     try {
-                        const geojson = marker.geojson();
-                        log(`Marker ${index + 1}:`);
+                        const geojson = feature.geojson();
+                        featureCollection.features.push(geojson);
+                        log(`要素 ${index + 1} (${feature.constructor.name}):`, 'info');
                         log(JSON.stringify(geojson, null, 2));
                     } catch (error) {
-                        log(`获取 Marker ${index + 1} 数据失败: ${error.message}`);
+                        log(`获取要素 ${index + 1} 数据失败: ${error.message}`, 'error');
                     }
                 } else {
-                    log(`Marker ${index + 1}: 没有 geojson() 方法`);
+                    log(`要素 ${index + 1}: 没有 geojson() 方法`, 'error');
                 }
             });
+            
+            // 提供下载链接
+            const dataStr = JSON.stringify(featureCollection, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            const exportFileDefaultName = `leaflet-geo-tools-export-${new Date().getTime()}.json`;
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+            
+            log(`数据已导出，共 ${features.length} 个要素`, 'success');
         });
         
+
         // 初始化日志
-        log('Leaflet Geo Tools Marker 测试页面已加载');
-        log('地图中心: [31.2304, 121.4737] (上海)');
-        log('等待用户操作...');
+        log('Leaflet Geo Tools 完整演示页面已加载', 'success');
+        log('地图中心: [31.2304, 121.4737] (上海)', 'info');
+        log('可用的编辑器类: ' + (GeoTools ? Object.keys(GeoTools).join(', ') : '无'), 'info');
         
-        // 添加一些测试 Marker
+        // 添加一些初始化提示
         setTimeout(() => {
             if (GeoTools) {
-                log('库已加载，可以开始测试');
-                updateStatus('就绪 - 点击"开始绘制 Marker"按钮开始测试');
+                updateStatus('就绪 - 点击上方按钮开始绘制');
             }
         }, 1000);
     </script>
