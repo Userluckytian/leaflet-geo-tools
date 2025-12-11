@@ -1,31 +1,47 @@
 # This workflow will run tests using node and then publish a package to GitHub Packages when a release is created
 # For more information see: https://docs.github.com/en/actions/publishing-packages/publishing-nodejs-packages
 
-name: Node.js Package
+name: Publish to npm on Release
 
 on:
   release:
-    types: [created] # 仅当创建 Release 时触发
+    types: [created]
 
 jobs:
-  publish:
+  publish-npm:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout code (with tag info)
         uses: actions/checkout@v3
+        with:
+          # 建议获取完整的提交历史，对于基于Tag的版本计算更安全
+          fetch-depth: 0
 
-      - name: Setup Node.js
+      - name: Setup Node.js and npm registry
         uses: actions/setup-node@v3
         with:
-          node-version: 20
-          registry-url: 'https://registry.npmjs.org'
-    
-      - name: npm install
-        run: npm install
-      - name: Rollup build
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org/'
+
+      - name: Extract and Set Version from Release Tag
+        run: |
+          # 从 release 事件中直接获取 Tag 名称，这比 GITHUB_REF 更精确
+          TAG_NAME="${{ github.event.release.tag_name }}"
+          echo "Extracted Tag: $TAG_NAME"
+          # 去掉 Tag 名前的 'v'，得到纯数字版本号 (例如 1.0.1)
+          VERSION="${TAG_NAME#v}"
+          echo "Extracted Version: $VERSION"
+          # 使用 npm 命令更新 package.json 中的 version 字段
+          npm version $VERSION --no-git-tag-version --allow-same-version
+          echo "Updated package.json version to: $(node -p "require('./package.json').version")"
+
+      - name: Install dependencies (strict)
+        run: npm ci # 强烈推荐使用 npm ci 替代 npm install，确保依赖锁一致
+
+      - name: Build package
         run: npm run prepublishOnly
-     
+
       - name: Publish to npm
-        run: npm publish
+        run: npm publish --access public # 明确指定公开访问权限
         env:
           NODE_AUTH_TOKEN: ${{secrets.githubPublishToken}}
