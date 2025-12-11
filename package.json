@@ -1,6 +1,6 @@
 {
   "name": "leaflet-geo-tools",
-  "version": "0.1.1",
+  "version": "0.1.0",
   "description": "Enhanced GIS tools for Leaflet",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
