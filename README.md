@@ -9,9 +9,9 @@
 ## ✨ 特性
 
 - 🎨 **丰富的绘制工具**：点、线、面、矩形、圆形
-- ✏️ **强大的编辑功能**：顶点编辑、中点插入、面拖动、挖孔操作
+- ✏️ **强大的编辑功能**：顶点编辑、中点插入、拖动面、复杂面编辑（polygon、multi-polygon、Polygon with Hole(s)等）编辑
 - 📏 **精确测量工具**：距离测量、面积测量
-- 🔗 **拓扑操作**：多边形分割、空间分析
+- 🔗 **拓扑操作**：面合并、线分割
 - 🚀 **高性能**：优化的渲染和事件处理
 - 📦 **TypeScript 支持**：完整的类型定义
 - 🔌 **多种使用方式**：支持 ES6、CommonJS 和浏览器直接使用
@@ -88,7 +88,7 @@ const existingGeometry = {
 const editor = new LeafletPolygonEditor(map, {}, existingGeometry);
 
 // 双击图形进入编辑模式
-// 支持：拖动顶点、插入中点、删除顶点、拖动整个面
+// 支持：拖动顶点、插入中点、删除顶点（右键顶点触发删除）、拖动整个面
 ```
 
 ### 3. 测量工具
@@ -369,6 +369,7 @@ if (result) {
 ### 在线示例
 查看完整的在线示例：[示例页面](https://vite-react19-zustand-tailwindcss-an.vercel.app/#/layout/map)
 website login: username: 123 pwd: 123
+
 
 ### 本地运行示例
 ```bash
