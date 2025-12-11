@@ -1,7 +1,7 @@
 # Leaflet Geo Tools
 
 [![npm version](https://img.shields.io/npm/v/leaflet-geo-tools.svg)](https://www.npmjs.com/package/leaflet-geo-tools)
-[![license](https://img.shields.io/npm/l/leaflet-geo-tools.svg)](https://github.com/yourusername/leaflet-geo-tools/blob/main/LICENSE)
+[![license](https://img.shields.io/npm/l/leaflet-geo-tools.svg)](https://github.com/Userluckytian/leaflet-geo-tools/blob/main/LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
 
 > 基于 Leaflet 的增强型 GIS 工具库，提供专业的绘制、编辑、测量和拓扑操作功能。
@@ -367,12 +367,12 @@ if (result) {
 ## 📖 示例
 
 ### 在线示例
-查看完整的在线示例：[示例页面](https://yourusername.github.io/leaflet-geo-tools/examples/)
+查看完整的在线示例：[示例页面](https://Userluckytian.github.io/leaflet-geo-tools/examples/)
 
 ### 本地运行示例
 ```bash
 # 克隆仓库
-git clone https://github.com/yourusername/leaflet-geo-tools.git
+git clone https://github.com/Userluckytian/leaflet-geo-tools.git
 cd leaflet-geo-tools
 
 # 安装依赖
@@ -465,9 +465,9 @@ npm run test:coverage
 
 ## 📞 支持
 
-- 提交 [Issue](https://github.com/yourusername/leaflet-geo-tools/issues)
+- 提交 [Issue](https://github.com/Userluckytian/leaflet-geo-tools/issues)
 - 查看 [常见问题解答](FAQ.md)
-- 加入讨论 [Discussions](https://github.com/yourusername/leaflet-geo-tools/discussions)
+- 加入讨论 [Discussions](https://github.com/Userluckytian/leaflet-geo-tools/discussions)
 
 ---
 
