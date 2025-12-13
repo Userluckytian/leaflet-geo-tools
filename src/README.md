@@ -39,6 +39,4 @@ custom-leaflet-draw                # 基于leaflet构建的图层绘制、编辑
 
 
 ### 发布步骤
-1: 构建js-lib库，供es5方式引入
-2: 构建声明文件 比如： @types/leafletEditor。问GPT觉得叫什么名字合适？
-3: 将type 和 发布到npm
+构建js-lib库，供es5方式引入
