@@ -243,7 +243,6 @@ npm run test:coverage
 
 ## 👥 作者
 
-**Your Name**
 - GitHub: [@Userluckytian](https://github.com/Userluckytian)
 - Email: tianlukang123@163.com
 
