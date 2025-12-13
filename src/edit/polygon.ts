@@ -124,7 +124,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
      */
     private mapDblClickEvent = (e: L.LeafletMouseEvent) => {
         // 关键：只有激活的实例才处理事件
-        if (!this.canConsume(e)) return;
+        if (!this.isActive()) return;
         if (!this.polygonLayer) throw new Error('面图层实例化失败，无法完成图层创建，请重试');
         // 情况1： 正在绘制状态时，绘制的逻辑
         if (this.currentState === PolygonEditorState.Drawing) {
@@ -139,6 +139,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
             this.updateAndNotifyStateChange(PolygonEditorState.Idle);
             return;
         } else {
+            if (!this.canConsume(e)) return;
             // 情况 2：已绘制完成后的后续双击事件的逻辑均走这个
             const clickedLatLng = e.latlng;
             const polygonGeoJSON = this.polygonLayer.toGeoJSON();
@@ -748,6 +749,14 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         }
     }
 
+    /** 这个函数只是用于校验编辑的逻辑，不能写在事件的最顶部，因为如果是绘制事件，则不应该增加这个校验，否则会出现无法完成绘制的bug
+     *
+     *
+     * @private
+     * @param {L.LeafletMouseEvent} e
+     * @return {*}  {boolean}
+     * @memberof LeafletPolygonEditor
+     */
     private canConsume(e: L.LeafletMouseEvent): boolean {
         if (!this.isVisible) return false;
         const clickIsSelf = this.isClickOnMyLayer(e);
