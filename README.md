@@ -6,6 +6,31 @@
 
 > 基于 Leaflet 的增强型 GIS 工具库，提供专业的绘制、编辑、测量和拓扑操作功能。
 
+## 📖 示例
+
+### 在线示例
+查看完整的在线示例：[示例页面](https://vite-react19-zustand-tailwindcss-an.vercel.app/#/layout/map)
+website login: username: 123 pwd: 123
+
+
+### 本地运行示例
+```bash
+# 克隆仓库
+git clone https://github.com/Userluckytian/leaflet-geo-tools.git
+cd leaflet-geo-tools
+
+# 安装依赖
+npm install
+
+# 构建库
+npm run build
+
+# 启动示例服务器
+npx serve .
+# 然后访问 http://localhost:3000/examples/
+```
+
+
 ## ✨ 特性
 
 - 🎨 **丰富的绘制工具**：点、线、面、矩形、圆形
@@ -76,10 +101,10 @@ yarn add leaflet leaflet-geo-tools
 
 ## 🎬 应用场景
 
-**1. 我只需要绘制，绘制完成后获取绘制图形的geometry空间信息。**
+1. **我只需要绘制，绘制完成后获取绘制图形的geometry空间信息。**
 您需要使用【src/draw】目录下的功能。
-**2. 我希望绘制后的多边形是可以被编辑的，而且我有多面（multi-polygon、polygon with hole（s））的需求。**
-**3. 我希望传入一个已知的geometry信息，它会被渲染到地图上，可以被编辑。**
+2. **我希望绘制后的多边形是可以被编辑的，而且我有多面（multi-polygon、polygon with hole（s））的需求。**
+3. **我希望传入一个已知的geometry信息，它会被渲染到地图上，可以被编辑。**
 2、3的功能，您需要使用【src/edit】目录下的功能。
 
 ## 🚀 快速开始
@@ -179,30 +204,6 @@ const editor = new LeafletRectangleEditor(map, {}, existingGeometry);
 
 
 ### 4. 拓扑操作（待补充）
-
-## 📖 示例
-
-### 在线示例
-查看完整的在线示例：[示例页面](https://vite-react19-zustand-tailwindcss-an.vercel.app/#/layout/map)
-website login: username: 123 pwd: 123
-
-
-### 本地运行示例
-```bash
-# 克隆仓库
-git clone https://github.com/Userluckytian/leaflet-geo-tools.git
-cd leaflet-geo-tools
-
-# 安装依赖
-npm install
-
-# 构建库
-npm run build
-
-# 启动示例服务器
-npx serve .
-# 然后访问 http://localhost:3000/examples/
-```
 
 ## 🛠️ 开发
 
