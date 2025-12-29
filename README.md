@@ -274,6 +274,6 @@ npm run test:coverage
 - ✅ 距离和面积测量
 - ✅ TypeScript 支持
 - ✅ 完整的文档和示例
-- 🎯 topo基本操作（线裁剪、合并面）
-- 🎯 复杂topo操作
+- ✅ topo基本操作（线裁剪、合并面）
+- 🎯 整形要素工具（Reshape Feature）
 - 🎯 ...
