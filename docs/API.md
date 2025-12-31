@@ -4,6 +4,32 @@ leaflet-geo-tools 提供了一系列基于 Leaflet 的地图绘制与编辑工�
 
 ---
 
+## 通用类型说明
+
+#### `PolygonEditorState`
+
+```ts
+enum PolygonEditorState {
+  Idle = 'idle',       // 空闲状态：既不是绘制中，也不是编辑中
+  Drawing = 'drawing', // 正在绘制
+  Editing = 'editing'  // 正在编辑
+}
+```
+
+用于表示编辑器当前的状态，配合 `onStateChange()` 使用。
+
+
+
+#### `LeafletPolylineOptionsExpends`
+
+```ts
+interface LeafletPolylineOptionsExpends extends L.PolylineOptions {
+  origin?: any;         // 可选：用于存储原始数据或业务标识
+  defaultStyle?: any;   // 可选：用于存储默认样式（如 hover 时恢复）
+  [key: string]: unknown;
+}
+```
+
 ## 1. LeafletEditPolygon
 
 LeafletEditPolygon 是一个基于 Leaflet 的多边形绘制与编辑组件，支持绘制、拖拽编辑、插入中点、右键删除、图层显隐控制、GeoJSON 导出等功能，适用于地图标注、空间分析、可视化编辑等场景。
@@ -224,31 +250,102 @@ editor.onStateChange((state) => {
 });
 ```
 
-
-## 3. 通用类型说明
-
-#### `PolygonEditorState`
-
-```ts
-enum PolygonEditorState {
-  Idle = 'idle',       // 空闲状态：既不是绘制中，也不是编辑中
-  Drawing = 'drawing', // 正在绘制
-  Editing = 'editing'  // 正在编辑
-}
-```
-
-用于表示编辑器当前的状态，配合 `onStateChange()` 使用。
+---
 
 
+## 3. LeafletCircle 
 
-#### `LeafletPolylineOptionsExpends`
+LeafletCircle 是一个基于 Leaflet 的圆形绘制工具组件，适用于地图标注、范围圈选、空间分析等场景。  
+该组件专注于“绘制 → 获取结果 → 监听状态”，不暴露图层对象，仅提供必要的坐标输出与状态监听机制。
+
+---
+
+### 3.1 构造函数
 
 ```ts
-interface LeafletPolylineOptionsExpends extends L.PolylineOptions {
-  origin?: any;         // 可选：用于存储原始数据或业务标识
-  defaultStyle?: any;   // 可选：用于存储默认样式（如 hover 时恢复）
-  [key: string]: unknown;
-}
+new LeafletCircle(
+  map: L.Map,
+  options?: L.CircleOptions
+)
 ```
 
+| 参数名 | 类型 | 是否必填 | 说明 |
+|--------|------|----------|------|
+| `map` | `L.Map` | ✅ | Leaflet 地图实例 |
+| `options` | `L.CircleOptions` | ❌ | 圆图层样式配置（如 color、fillColor、radius 等） |
 
+> ⚠️ 构造函数调用后即进入绘制模式，用户需在地图上点击两次：第一次确定圆心，第二次确定半径。
+
+---
+
+### 3.2 事件监听
+
+#### `onStateChange(callback: (state: PolygonEditorState) => void): void`
+
+注册一个回调函数，用于监听绘制状态的变化。
+
+##### 状态枚举：`PolygonEditorState`
+
+| 状态值 | 描述 |
+|--------|------|
+| `Idle` | 空闲状态，未处于绘制中 |
+| `Drawing` | 正在绘制圆形 |
+
+##### 示例：
+
+```ts
+circleTool.onStateChange((state) => {
+  if (state === 'Drawing') {
+    console.log('正在绘制圆...');
+  } else {
+    console.log('绘制完成，进入空闲状态');
+  }
+});
+```
+
+---
+
+### 3.3 公共方法
+
+#### `geojson(): GeoJSON.Feature`
+返回绘制完成后的圆形 GeoJSON 数据（类型为 Polygon）。
+
+> ⚠️ 若尚未完成绘制，将抛出异常。
+
+
+#### `destroy(): void`
+销毁图层并清除地图事件监听，释放资源。
+
+
+#### `offStateChange(listener: (state: PolygonEditorState) => void): void`
+移除指定的状态监听器。
+
+
+### 3.4 使用示例
+
+```ts
+import { LeafletCircle } from 'leaflet-geo-tools';
+import * as L from 'leaflet';
+
+const map = L.map('map').setView([31.2, 120.6], 13);
+
+// 初始化绘制圆工具（进入绘制模式）
+const circleTool = new LeafletCircle(map, {
+  color: 'red',
+  fillColor: 'pink',
+  fillOpacity: 0.4
+});
+
+// 监听状态变化
+circleTool.onStateChange((state) => {
+  if (state === 'Idle') {
+    const geojson = circleTool.geojson();
+    console.log('绘制完成，结果为：', geojson);
+  }
+});
+
+// 销毁图层
+// circleTool.destroy();
+```
+
+---
