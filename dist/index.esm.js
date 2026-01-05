@@ -1469,7 +1469,7 @@ var LeafletPolygonEditor = /** @class */ (function (_super) {
     // 初始化图层
     LeafletPolygonEditor.prototype.initLayers = function (options, defaultGeometry) {
         // 试图给一个非法的经纬度，来测试是否leaflet直接抛出异常。如果不行，后续使用[[-90, -180], [-90, -180], [-90, -180], [-90, -180]]坐标，也就是页面的左下角
-        var polygonOptions = __assign(__assign({ pane: 'overlayPane', defaultStyle: this.drawLayerStyle }, this.drawLayerStyle), options);
+        var polygonOptions = __assign(__assign({ pane: 'overlayPane', layerVisible: true, defaultStyle: this.drawLayerStyle }, this.drawLayerStyle), options);
         var coords = [[181, 181], [181, 181], [181, 181], [181, 181]]; // 默认空图形
         if (defaultGeometry) {
             coords = this.convertGeoJSONToLatLngs(defaultGeometry);
@@ -1570,7 +1570,7 @@ var LeafletPolygonEditor = /** @class */ (function (_super) {
         var _a;
         this.isVisible = true;
         // 使用用户默认设置的样式，而不是我自定义的！
-        (_a = this.polygonLayer) === null || _a === void 0 ? void 0 : _a.setStyle(this.polygonLayer.options.defaultStyle);
+        (_a = this.polygonLayer) === null || _a === void 0 ? void 0 : _a.setStyle(__assign(__assign({}, this.polygonLayer.options.defaultStyle), { layerVisible: true }));
     };
     /** 控制图层隐藏
      *
@@ -1587,7 +1587,7 @@ var LeafletPolygonEditor = /** @class */ (function (_super) {
             fillColor: 'red', // same color as the line
             fillOpacity: 0
         };
-        (_a = this.polygonLayer) === null || _a === void 0 ? void 0 : _a.setStyle(hideStyle);
+        (_a = this.polygonLayer) === null || _a === void 0 ? void 0 : _a.setStyle(__assign(__assign({}, hideStyle), { layerVisible: false }));
         // ✅ 退出编辑状态（若存在）
         if (this.currentState === PolygonEditorState.Editing) {
             this.exitEditMode();
@@ -1607,6 +1607,16 @@ var LeafletPolygonEditor = /** @class */ (function (_super) {
         else {
             this.hide();
         }
+    };
+    /** 获取图层显隐
+     *
+     *
+     * @param {boolean} visible
+     * @memberof LeafletEditPolygon
+     */
+    LeafletPolygonEditor.prototype.getLayerVisible = function () {
+        var _a, _b;
+        return (_b = (_a = this.polygonLayer) === null || _a === void 0 ? void 0 : _a.options) === null || _b === void 0 ? void 0 : _b.layerVisible;
     };
     /** 销毁图层，从地图中移除图层
      *
@@ -1769,22 +1779,43 @@ var LeafletPolygonEditor = /** @class */ (function (_super) {
                     var p1 = ring[i].getLatLng();
                     var p2 = ring[nextIndex].getLatLng();
                     var midpoint = L.latLng((p1.lat + p2.lat) / 2, (p1.lng + p2.lng) / 2);
-                    var marker = L.circleMarker(midpoint, {
-                        radius: 6,
-                        color: '#ff0000',
-                        fillColor: '#ffffff',
-                        opacity: 0.8,
-                        fillOpacity: 0.8,
-                        weight: 1
+                    var marker = L.marker(midpoint, {
+                        draggable: true,
+                        icon: _this.buildMarkerIcon("border-radius: 50%; background: #ffffff80; border: solid 1px #f00;", [14, 14])
                     }).addTo(_this.map);
-                    marker.on('click', function () {
-                        var newMarker = L.marker(midpoint, {
+                    // 中点被拖动时，图形同步更新
+                    marker.on('drag', function () {
+                        var latlng = marker.getLatLng();
+                        // 1. 拷贝当前顶点坐标
+                        var coords = _this.vertexMarkers.map(function (polygon) {
+                            return polygon.map(function (ring) {
+                                return ring.map(function (m) { return [m.getLatLng().lat, m.getLatLng().lng]; });
+                            });
+                        });
+                        // 2. 插入中点坐标到对应位置（不修改原 marker 数组）
+                        var ring = coords[polygonIndex][ringIndex];
+                        var newRing = __spreadArray([], ring, true);
+                        newRing.splice(nextIndex, 0, [latlng.lat, latlng.lng]);
+                        // 3. 构造新的坐标结构
+                        var newCoords = __spreadArray([], coords, true);
+                        newCoords[polygonIndex] = __spreadArray([], coords[polygonIndex], true);
+                        newCoords[polygonIndex][ringIndex] = newRing;
+                        // 4. 实时渲染
+                        _this.renderLayer(newCoords);
+                    });
+                    // 中点拖动结束后，移除此处中点，执行添加新的顶点
+                    marker.on('dragend', function () {
+                        var latlng = marker.getLatLng();
+                        // 1. 从地图中移除中点 marker
+                        _this.map.removeLayer(marker);
+                        // 2. 创建新的顶点 marker
+                        var newMarker = L.marker(latlng, {
                             draggable: true,
                             icon: _this.buildMarkerIcon()
                         }).addTo(_this.map);
-                        // 插入新 marker
+                        // 3. 插入到顶点数组
                         _this.vertexMarkers[polygonIndex][ringIndex].splice(nextIndex, 0, newMarker);
-                        // 绑定事件
+                        // 4. 绑定事件
                         newMarker.on('drag', function () {
                             _this.renderLayerFromMarkers();
                             _this.updateMidpoints();
@@ -1809,6 +1840,7 @@ var LeafletPolygonEditor = /** @class */ (function (_super) {
                                 alert('环点数不能少于3个');
                             }
                         });
+                        // 5. 刷新图层和中点
                         _this.renderLayerFromMarkers();
                         _this.pushHistoryFromMarkers();
                         _this.updateMidpoints();
@@ -1955,7 +1987,18 @@ var LeafletPolygonEditor = /** @class */ (function (_super) {
             return false;
         }
     };
+    /** 这个函数只是用于校验编辑的逻辑，不能写在事件的最顶部，因为如果是绘制事件，则不应该增加这个校验，否则会出现无法完成绘制的bug
+     *
+     *
+     * @private
+     * @param {L.LeafletMouseEvent} e
+     * @return {*}  {boolean}
+     * @memberof LeafletPolygonEditor
+     */
     LeafletPolygonEditor.prototype.canConsume = function (e) {
+        // 如果是绘制操作，则直接跳过判断，后面的逻辑是给编辑操作准备的
+        if (this.currentState === PolygonEditorState.Drawing)
+            return true;
         if (!this.isVisible)
             return false;
         var clickIsSelf = this.isClickOnMyLayer(e);
@@ -2006,7 +2049,6 @@ var BaseRectangleEditor = /** @class */ (function (_super) {
     function BaseRectangleEditor(map) {
         var _this = _super.call(this, map) || this;
         _this.vertexMarkers = []; // 存储顶点标记的数组
-        _this.midpointMarkers = []; // 存储【线中点】标记的数组
         _this.historyStack = []; // 历史记录，存储快照
         _this.redoStack = []; // 重做记录，存储快照
         return _this;
@@ -2093,7 +2135,7 @@ var LeafletRectangleEditor = /** @class */ (function (_super) {
     /** 创建一个矩形编辑类
      *
      * @param {L.Map} map 地图对象
-     * @param {L.PolylineOptions} [options={}] 要构建的多边形的样式属性
+     * @param {LeafletPolylineOptionsExpends} [options={}] 要构建的多边形的样式属性
      * @param {GeoJSON.Geometry} [defaultGeometry] 默认的空间信息
      * @memberof LeafletEditPolygon
      */
@@ -2103,9 +2145,11 @@ var LeafletRectangleEditor = /** @class */ (function (_super) {
         _this.rectangleLayer = null;
         // 图层初始化时
         _this.drawLayerStyle = {
+            weight: 2,
             color: 'red', // 设置边线颜色
             fillColor: "red", // 设置填充颜色
             fillOpacity: 0.3, // 设置填充透明度
+            fill: true, // no fill color means default fill color (gray for `dot` and `circle` markers, transparent for `plus` and `star`)
         };
         _this.tempCoords = [];
         // #region 工具函数，点图层的逻辑只需要看上面的内容就行了
@@ -2253,7 +2297,7 @@ var LeafletRectangleEditor = /** @class */ (function (_super) {
     // 初始化图层
     LeafletRectangleEditor.prototype.initLayers = function (options, defaultGeometry) {
         // 试图给一个非法的经纬度，来测试是否leaflet直接抛出异常。如果不行，后续使用[[-90, -180], [-90, -180]]坐标，也就是页面的左下角
-        var polylineOptions = __assign(__assign({ pane: 'overlayPane' }, this.drawLayerStyle), options);
+        var polylineOptions = __assign(__assign({ pane: 'overlayPane', layerVisible: true, defaultStyle: this.drawLayerStyle }, this.drawLayerStyle), options);
         var coords = [[181, 181], [182, 182]]; // 默认空图形
         if (defaultGeometry) {
             coords = this.convertGeoJSONToLatLngs(defaultGeometry);
@@ -2354,6 +2398,63 @@ var LeafletRectangleEditor = /** @class */ (function (_super) {
      */
     LeafletRectangleEditor.prototype.getLayer = function () {
         return this.rectangleLayer;
+    };
+    /** 控制图层显示
+ *
+ *
+ * @memberof LeafletEditPolygon
+ */
+    LeafletRectangleEditor.prototype.show = function () {
+        var _a;
+        this.isVisible = true;
+        // 使用用户默认设置的样式，而不是我自定义的！
+        (_a = this.rectangleLayer) === null || _a === void 0 ? void 0 : _a.setStyle(__assign(__assign({}, this.rectangleLayer.options.defaultStyle), { layerVisible: true }));
+    };
+    /** 控制图层隐藏
+     *
+    *
+    * @memberof LeafletEditPolygon
+    */
+    LeafletRectangleEditor.prototype.hide = function () {
+        var _a;
+        this.isVisible = false;
+        var hideStyle = {
+            color: 'red',
+            weight: 0,
+            fill: false, // no fill color means default fill color (gray for `dot` and `circle` markers, transparent for `plus` and `star`)
+            fillColor: 'red', // same color as the line
+            fillOpacity: 0,
+        };
+        (_a = this.rectangleLayer) === null || _a === void 0 ? void 0 : _a.setStyle(__assign(__assign({}, hideStyle), { layerVisible: false }));
+        // ✅ 退出编辑状态（若存在）
+        if (this.currentState === PolygonEditorState.Editing) {
+            this.exitEditMode();
+            this.updateAndNotifyStateChange(PolygonEditorState.Idle);
+        }
+    };
+    /** 设置图层显隐
+     *
+     *
+     * @param {boolean} visible
+     * @memberof LeafletEditPolygon
+     */
+    LeafletRectangleEditor.prototype.setVisible = function (visible) {
+        if (visible) {
+            this.show();
+        }
+        else {
+            this.hide();
+        }
+    };
+    /** 获取图层显隐
+     *
+     *
+     * @param {boolean} visible
+     * @memberof LeafletEditPolygon
+     */
+    LeafletRectangleEditor.prototype.getLayerVisible = function () {
+        var _a, _b;
+        return (_b = (_a = this.rectangleLayer) === null || _a === void 0 ? void 0 : _a.options) === null || _b === void 0 ? void 0 : _b.layerVisible;
     };
     /** 销毁图层，从地图中移除图层
      *
@@ -2614,6 +2715,9 @@ var LeafletRectangleEditor = /** @class */ (function (_super) {
         }
     };
     LeafletRectangleEditor.prototype.canConsume = function (e) {
+        // 如果是绘制操作，则直接跳过判断，后面的逻辑是给编辑操作准备的
+        if (this.currentState === PolygonEditorState.Drawing)
+            return true;
         if (!this.isVisible)
             return false;
         var clickIsSelf = this.isClickOnMyLayer(e);

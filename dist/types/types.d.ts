@@ -23,3 +23,15 @@ export interface LeafletPolylineOptionsExpends extends L.PolylineOptions {
     defaultStyle?: any;
     [key: string]: unknown;
 }
+export interface TopoMergeResult {
+    mergedLayers: L.GeoJSON[];
+    mergedGeom: GeoJSON.Feature | null;
+}
+export interface TopoClipResult {
+    doClipLayers: L.Layer[];
+    clipedGeoms: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>[];
+}
+export interface TopoReshapeFeatureResult {
+    doReshapeLayers: L.Layer[];
+    reshapedGeoms: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>[];
+}

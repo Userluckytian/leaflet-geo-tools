@@ -1,7 +1,7 @@
 import { BaseEditor } from "./BaseEditor";
 export declare abstract class BasePolygonEditor extends BaseEditor {
     protected vertexMarkers: L.Marker[][][];
-    protected midpointMarkers: L.CircleMarker[][][];
+    protected midpointMarkers: L.Marker[][][];
     protected historyStack: number[][][][][];
     protected redoStack: number[][][][][];
     constructor(map: L.Map);

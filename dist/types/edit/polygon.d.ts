@@ -105,6 +105,13 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
      * @memberof LeafletEditPolygon
      */
     setVisible(visible: boolean): void;
+    /** 获取图层显隐
+     *
+     *
+     * @param {boolean} visible
+     * @memberof LeafletEditPolygon
+     */
+    getLayerVisible(): boolean;
     /** 销毁图层，从地图中移除图层
      *
      *
@@ -203,6 +210,14 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
      * @memberof LeafletEditRectangle
      */
     private isClickOnMyLayer;
+    /** 这个函数只是用于校验编辑的逻辑，不能写在事件的最顶部，因为如果是绘制事件，则不应该增加这个校验，否则会出现无法完成绘制的bug
+     *
+     *
+     * @private
+     * @param {L.LeafletMouseEvent} e
+     * @return {*}  {boolean}
+     * @memberof LeafletPolygonEditor
+     */
     private canConsume;
     private convertGeoJSONToLatLngs;
 }

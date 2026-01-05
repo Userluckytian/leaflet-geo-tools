@@ -1,5 +1,6 @@
 import * as L from 'leaflet';
 import LeafletPolyline from '../draw/polyline';
+import { TopoReshapeFeatureResult, type TopoClipResult, type TopoMergeResult } from '../types';
 export declare class LeafletTopology {
     private static instance;
     private map;
@@ -18,11 +19,15 @@ export declare class LeafletTopology {
     /**
      * 执行合并操作
      * */
-    merge(): void;
+    merge(callback: (result: TopoMergeResult) => void): void;
+    /**
+   * 执行整形要素工具操作
+   * */
+    reshapeFeature(callback: (result: TopoReshapeFeatureResult) => void): void;
     /**
      * 执行线裁剪操作
      * */
-    clipByLine(): void;
+    clipByLine(callback: (result: TopoClipResult) => void): void;
     /** 基于选中的图层的空间信息，添加对应的高亮图层
      *
      *

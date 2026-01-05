@@ -1,4 +1,5 @@
 import * as L from 'leaflet';
+import { type LeafletPolylineOptionsExpends } from '../types';
 import { BaseRectangleEditor } from './BaseRectangleEditor';
 export default class LeafletRectangleEditor extends BaseRectangleEditor {
     private rectangleLayer;
@@ -7,11 +8,11 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
     /** 创建一个矩形编辑类
      *
      * @param {L.Map} map 地图对象
-     * @param {L.PolylineOptions} [options={}] 要构建的多边形的样式属性
+     * @param {LeafletPolylineOptionsExpends} [options={}] 要构建的多边形的样式属性
      * @param {GeoJSON.Geometry} [defaultGeometry] 默认的空间信息
      * @memberof LeafletEditPolygon
      */
-    constructor(map: L.Map, options?: L.PolylineOptions, defaultGeometry?: GeoJSON.Geometry);
+    constructor(map: L.Map, options?: LeafletPolylineOptionsExpends, defaultGeometry?: GeoJSON.Geometry);
     private initLayers;
     /** 实例化矩形图层事件
      *
@@ -93,6 +94,32 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
      * @memberof LeafletEditRectangle
      */
     getLayer(): L.Rectangle<any> | null;
+    /** 控制图层显示
+ *
+ *
+ * @memberof LeafletEditPolygon
+ */
+    private show;
+    /** 控制图层隐藏
+     *
+    *
+    * @memberof LeafletEditPolygon
+    */
+    private hide;
+    /** 设置图层显隐
+     *
+     *
+     * @param {boolean} visible
+     * @memberof LeafletEditPolygon
+     */
+    setVisible(visible: boolean): void;
+    /** 获取图层显隐
+     *
+     *
+     * @param {boolean} visible
+     * @memberof LeafletEditPolygon
+     */
+    getLayerVisible(): boolean;
     /** 销毁图层，从地图中移除图层
      *
      *

@@ -1,16 +1,22 @@
+import type { TopoClipResult, TopoReshapeFeatureResult } from "../types";
 /** 保存裁剪后的图层
  *
- *
- * @param {*} lineFeature 绘制的线Feature 格式：{type: "Feature", properties: {…}, geometry: { coordinates: [ [111, 80], [120, 80], [120, 90], [111, 90] ], type: "LineString" }}
- * @param {*} selLayers  用户选择的图层
- * @return {*} 返回对象{clipsPolygons,  waitingDelLayer}，其中clipsPolygons为裁剪后的多边形，waitingDelLayer为需要删除的旧图层
+ * @param {Feature<any>} lineFeature 绘制的线Feature
+ * @param {L.GeoJSON[]} selLayers 用户选择的图层数组
+ * @return {Object} 返回对象{clipsPolygons, waitingDelLayer}
  */
-export declare function clipSelectedLayersByLine(lineFeature: any, selLayers: any): {
-    clipsPolygons: any[];
-    waitingDelLayer: any[];
-};
+export declare function clipSelectedLayersByLine(lineFeature: GeoJSON.Feature<any>, selLayers: L.GeoJSON[]): TopoClipResult;
 /** 合并多边形
  *
  * @param selLayers
  */
-export declare function mergePolygon(selLayers: any): any;
+export declare function mergePolygon(selLayers: any): GeoJSON.Feature | null;
+/** 返回整形要素工具处理后的结果和参与裁剪的要素数组
+ *
+ *
+ * @export
+ * @param {GeoJSON.Feature<any>} lineFeature
+ * @param {L.GeoJSON[]} selLayers
+ * @return {*}  {TopoReshapeFeatureResult}
+ */
+export declare function reshapeSelectedLayersByLine(sketchLine: GeoJSON.Feature<any>, selLayers: L.GeoJSON[], map: L.Map): TopoReshapeFeatureResult;
