@@ -1,6 +1,7 @@
 import { featureCollection, flattenEach, union } from "@turf/turf";
 import splitPolygon from "../topo/turf-polygon-split";
-import type { TopoClipResult } from "../types";
+import type { TopoClipResult, TopoReshapeFeatureResult } from "../types";
+import { reshapeMultiPolygonByLine, reshapePolygonByLine } from "../topo/turf-reshape-feature";
 
 /** 保存裁剪后的图层
  *
@@ -80,6 +81,51 @@ export function mergePolygon(selLayers: any): GeoJSON.Feature | null {
     // console.log('unionGeom', unionGeom);
     return unionGeom;
 }
+
+/** 返回整形要素工具处理后的结果和参与裁剪的要素数组
+ * 
+ *
+ * @export
+ * @param {GeoJSON.Feature<any>} lineFeature
+ * @param {L.GeoJSON[]} selLayers
+ * @return {*}  {TopoReshapeFeatureResult}
+ */
+export function reshapeSelectedLayersByLine(
+    sketchLine: GeoJSON.Feature<any>,
+    selLayers: L.GeoJSON[],
+    map: L.Map
+): TopoReshapeFeatureResult {
+    const waitingDelLayer: L.Layer[] = [];
+    const results: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>[] = [];
+    selLayers.forEach((layer: L.GeoJSON) => {
+
+        const geojsonFeatureCollection = layer.toGeoJSON() as GeoJSON.FeatureCollection<any>;
+        const geojson = geojsonFeatureCollection.features[0];
+        const type = geojson.geometry.type;
+        switch (type) {
+            case 'Polygon':
+                const polyResult = reshapePolygonByLine(geojson as GeoJSON.Feature<GeoJSON.Polygon>, sketchLine, map);
+                console.log('polyResult', polyResult);
+
+                if (polyResult)
+                    results.push(...polyResult);
+                break;
+            case 'MultiPolygon':
+                const MultiPolyResult = reshapeMultiPolygonByLine(geojson as GeoJSON.Feature<GeoJSON.MultiPolygon>, sketchLine, map);
+                if (MultiPolyResult)
+                    results.push(...MultiPolyResult);
+                break;
+            default:
+                console.warn(`不支持的图层类型: ${type}`);
+                break;
+        }
+
+    });
+    console.log('results', results);
+    
+    return { doReshapeLayers: waitingDelLayer, reshapedGeoms: results };
+}
+
 
 /**
  * 归一化 GeoJSON 数据中的所有坐标，保留指定小数位
