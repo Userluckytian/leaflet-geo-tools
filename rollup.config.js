@@ -18,13 +18,22 @@ export default [
     plugins: [
       resolve(),
       commonjs(),
-      typescript({ 
+      typescript({
         tsconfig: './tsconfig.json',
         declaration: true,
         declarationDir: 'dist/types',
         outputToFilesystem: false
       }),
-      terser()
+      terser({
+        compress: {
+          drop_console: true,           // ✅ 删除所有console语句
+          // drop_console: ['log', 'info'], // 或：只删除特定console方法
+          pure_funcs: ['console.log', 'console.info', 'console.debug'], // 另一种方式
+        },
+        format: {
+          comments: false               // ✅ 删除注释
+        }
+      })
     ],
     external: ['leaflet', '@turf/turf']
   },
@@ -37,11 +46,20 @@ export default [
     plugins: [
       resolve(),
       commonjs(),
-      typescript({ 
+      typescript({
         tsconfig: './tsconfig.json',
         declaration: true,
         declarationDir: 'dist/types',
         outputToFilesystem: false
+      }),
+      terser({
+        compress: {
+          drop_console: true, // ✅ ESM版本也删除console
+        },
+        mangle: false, // 可选：不混淆变量名，便于调试
+        format: {
+          comments: false
+        }
       })
     ],
     external: ['leaflet', '@turf/turf']
