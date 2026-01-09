@@ -1,351 +1,582 @@
 # leaflet-geo-tools API 文档
 
-leaflet-geo-tools 提供了一系列基于 Leaflet 的地图绘制与编辑工具组件。
+## 1. 概述
+
+leaflet-geo-tools 是一个基于 Leaflet 的地图绘制、测量工具库，提供丰富的交互式地理要素绘制和测量功能。
+
+**核心特性：**
+- 支持点、线、面、矩形、圆等多种几何图形绘制
+- 提供面积和距离测量工具
+- 统一的状态管理和事件监听机制
+- 不暴露底层图层对象，仅提供坐标信息输出
 
 ---
 
-## 通用类型说明
+## 2. 安装与使用
 
-#### `PolygonEditorState`
+### 安装
+
+```bash
+npm install leaflet-geo-tools
+# 或
+yarn add leaflet-geo-tools
+```
+
+### 基础依赖
+
+需要先安装 Leaflet：
+
+```bash
+npm install leaflet
+# 或
+yarn add leaflet
+```
+
+### 类型导入
+
+```typescript
+// TypeScript 使用方式
+import { LeafletArea, LeafletDistance, PolygonEditorState } from 'leaflet-geo-tools';
+import * as L from 'leaflet';
+
+// JavaScript 使用方式
+const { LeafletArea, LeafletDistance } = require('leaflet-geo-tools');
+```
+
+---
+
+## 3. 类型定义
+
+### 3.1 PolygonEditorState 状态枚举
+
+所有工具组件都使用统一的状态枚举来管理绘制状态：
 
 ```ts
-enum PolygonEditorState {
-  Idle = 'idle',       // 空闲状态：既不是绘制中，也不是编辑中
-  Drawing = 'drawing', // 正在绘制
-  Editing = 'editing'  // 正在编辑
+import { PolygonEditorState } from 'leaflet-geo-tools';
+
+// 状态值说明
+console.log(PolygonEditorState.Idle);      // 'idle' - 空闲状态
+console.log(PolygonEditorState.Drawing);   // 'drawing' - 正在绘制
+console.log(PolygonEditorState.Editing);   // 'editing' - 正在编辑（编辑功能暂未发布）
+```
+
+**状态说明：**
+| 状态值 | 描述 | 适用场景 |
+|--------|------|----------|
+| `Idle` | 空闲状态 | 未处于绘制或编辑中 |
+| `Drawing` | 绘制状态 | 正在绘制几何图形 |
+| `Editing` | 编辑状态 | 正在编辑已有图形 |
+
+### 3.2 测量相关类型
+
+#### 面积测量选项
+
+```ts
+type areaOptions = {
+    precision?: number;  // 精度，默认 2（保留小数位数）
+    lang: 'en' | 'zh';  // 语言，支持英文或中文
 }
 ```
 
-用于表示编辑器当前的状态，配合 `onStateChange()` 使用。
-
-
-
-#### `LeafletPolylineOptionsExpends`
+#### 距离测量选项
 
 ```ts
-interface LeafletPolylineOptionsExpends extends L.PolylineOptions {
-  origin?: any;         // 可选：用于存储原始数据或业务标识
-  defaultStyle?: any;   // 可选：用于存储默认样式（如 hover 时恢复）
-  [key: string]: unknown;
+import { Units } from '@turf/turf';
+
+type distanceOptions = {
+    units: Units;          // 距离单位（使用 @turf/turf 的 Units 类型）
+    precision?: number;    // 精度，默认 2
+    lang: 'en' | 'zh';    // 语言，支持英文或中文
 }
 ```
 
-## 1. LeafletEditPolygon
+**支持的单位类型：**
+- `'meters'` / `'metres'` - 米
+- `'kilometers'` / `'kilometres'` - 千米
+- `'centimeters'` / `'centimetres'` - 厘米
+- `'miles'` - 英里
+- `'nauticalmiles'` - 海里
+- `'feet'` - 英尺
+- `'yards'` - 码
+- `'inches'` - 英寸
+- `'radians'` - 弧度
+- `'degrees'` - 度
 
-LeafletEditPolygon 是一个基于 Leaflet 的多边形绘制与编辑组件，支持绘制、拖拽编辑、插入中点、右键删除、图层显隐控制、GeoJSON 导出等功能，适用于地图标注、空间分析、可视化编辑等场景。
-
-
-### 1.1 构造函数
+#### 格式化后的测量结果
 
 ```ts
-new LeafletEditPolygon(
-  map: L.Map,
-  options?: LeafletPolylineOptionsExpends,
-  defaultGeometry?: GeoJSON.Geometry
-)
+// 面积测量结果
+type FormattedArea = {
+    val: number;    // 数值
+    unit: string;   // 单位（根据语言自动转换）
+}
+
+// 距离测量结果
+type FormattedDistance = {
+    val: number;    // 数值
+    unit: string;   // 单位（根据语言自动转换）
+}
 ```
 
-| 参数名 | 类型 | 是否必填 | 说明 |
-|--------|------|----------|------|
-| `map` | `L.Map` | ✅ | Leaflet 地图实例 |
-| `options` | `LeafletPolylineOptionsExpends` | ❌ | 图层样式配置（如 color、fillColor、weight 等） |
-| `defaultGeometry` | `GeoJSON.Geometry` | ❌ | 初始图形（Polygon 或 MultiPolygon）<br>⚠️ 若传入该参数，组件将**不会进入绘制模式**，而是直接加载图形 |
-
-
-
-### 1.2 事件监听
-
-#### `onStateChange(callback: (state: PolygonEditorState) => void): void`
-
-注册一个回调函数，用于监听编辑器状态的变化。
-
-##### 状态枚举：`PolygonEditorState`
-
-| 状态值 | 描述 |
-|--------|------|
-| `Idle` | 空闲状态，未处于绘制或编辑中 |
-| `Drawing` | 正在绘制新图形 |
-| `Editing` | 正在编辑已有图形 |
-
-##### 示例：
+### 3.3 工具实例类型
 
 ```ts
-editor.onStateChange((state) => {
-  if (state === 'Drawing') {
-    console.log('正在绘制中...');
-  } else if (state === 'Editing') {
-    console.log('进入编辑模式');
-  } else {
-    console.log('编辑器空闲');
-  }
-});
+// 绘制工具实例类型
+export type drawInstance = LeafletCircle | MarkerPoint | LeafletPolygon | LeafletPolyline | LeafletRectangle;
+
+// 测量工具实例类型
+export type measureInstance = LeafletArea | LeafletDistance;
+
+// 编辑工具实例类型（暂未发布）
+export type editorInstance = LeafletEditPolygon | LeafletEditRectangle | LeafletRectangleEditor | LeafletPolygonEditor;
+
+// 所有工具实例联合类型
+export type leafletGeoEditorInstance = drawInstance | measureInstance | editorInstance;
 ```
 
-
-
-### 1.3 公共方法
-
-#### `geojson(): GeoJSON.Feature`
-返回当前图层的 GeoJSON 数据。
-
-#### `getLayer(): L.Layer`
-返回当前图层实例，可用于设置样式或图层管理。
-
-#### `setVisible(visible: boolean): void`
-设置图层是否可见。
-
-#### `getLayerVisible(): boolean`
-获取图层当前的可见状态。
-
-#### `destroy(): void`
-销毁图层与编辑器实例，释放资源。
-
-
-
-### 1.4 使用示例
+### 3.4 图层选项扩展类型
 
 ```ts
-import { LeafletEditPolygon } from 'leaflet-geo-tools';
+// 扩展的 Leaflet 折线选项
+export interface LeafletPolylineOptionsExpends extends L.PolylineOptions {
+    origin?: any;           // 存放源信息
+    defaultStyle?: any;     // 用户自定义的默认样式
+    [key: string]: unknown  // 其他自定义属性
+}
+```
+
+---
+
+## 4. 绘制工具 (Draw)
+
+### 4.1 MarkerPoint（点绘制）
+
+MarkerPoint 是一个基于 Leaflet 的单点绘制工具组件，适用于地图标注、位置标记、兴趣点标记等场景。
+
+---
+
+#### 4.1.1 构造函数
+
+```ts
+import { MarkerPoint } from 'leaflet-geo-tools';
 import * as L from 'leaflet';
 
-const map = L.map('map').setView([31.2, 120.6], 13);
-
-// 初始化编辑器（进入绘制模式）
-const editor = new LeafletEditPolygon(map, {
-  color: 'blue',
-  fillColor: 'lightblue',
-  weight: 2
-});
-
-// 或加载已有图形（进入查看模式）
-const editor = new LeafletEditPolygon(map, {
-  color: 'green'
-}, {
-  type: 'Polygon',
-  coordinates: [[[120.6, 31.2], [120.7, 31.2], [120.7, 31.3], [120.6, 31.3], [120.6, 31.2]]]
-});
-
-// 获取绘制结果
-const geojson = editor.geojson();
-
-// 控制图层显隐
-editor.setVisible(false);
-
-// 销毁图层
-editor.destroy();
-
-// 监听状态变化
-editor.onStateChange((state) => {
-  console.log('当前状态：', state); // Idle / Drawing / Editing
-});
-```
----
-
-## 2. LeafletEditRectangle
-
-LeafletEditRectangle 是一个基于 Leaflet 的矩形绘制与编辑组件，支持绘制、拖拽编辑、右键删除、图层显隐控制、GeoJSON 导出等功能，适用于地图标注、范围框选、空间分析等场景。
-
-
-### 2.1 构造函数
-
-```ts
-new LeafletEditRectangle(
+const markerTool = new MarkerPoint(
   map: L.Map,
-  options?: LeafletPolylineOptionsExpends,
-  defaultGeometry?: GeoJSON.Geometry
-)
+  options?: L.MarkerOptions
+);
 ```
 
 | 参数名 | 类型 | 是否必填 | 说明 |
 |--------|------|----------|------|
 | `map` | `L.Map` | ✅ | Leaflet 地图实例 |
-| `options` | `LeafletPolylineOptionsExpends` | ❌ | 图层样式配置（如 color、fillColor、weight 等） |
-| `defaultGeometry` | `GeoJSON.Geometry` | ❌ | 初始图形（类型为 Polygon，坐标为矩形）<br>⚠️ 若传入该参数，组件将**不会进入绘制模式**，而是直接加载图形 |
+| `options` | `L.MarkerOptions` | ❌ | 标记点样式配置 |
 
-
-### 2.2 事件监听
-
-#### `onStateChange(callback: (state: PolygonEditorState) => void): void`
-
-注册一个回调函数，用于监听编辑器状态的变化。
-
-##### 状态枚举：`PolygonEditorState`
-
-| 状态值 | 描述 |
-|--------|------|
-| `Idle` | 空闲状态，未处于绘制或编辑中 |
-| `Drawing` | 正在绘制新图形 |
-| `Editing` | 正在编辑已有图形 |
-
-##### 示例：
-
-```ts
-editor.onStateChange((state) => {
-  if (state === 'Drawing') {
-    console.log('正在绘制矩形...');
-  } else if (state === 'Editing') {
-    console.log('正在编辑矩形');
-  } else {
-    console.log('矩形编辑器空闲');
-  }
-});
-```
-
-
-
-### 2.3 公共方法
-
-#### `geojson(): GeoJSON.Feature`
-返回当前图层的 GeoJSON 数据。
-
-#### `getLayer(): L.Layer`
-返回当前图层实例，可用于设置样式或图层管理。
-
-#### `setVisible(visible: boolean): void`
-设置图层是否可见。
-
-#### `getLayerVisible(): boolean`
-获取图层当前的可见状态。
-
-#### `destroy(): void`
-销毁图层与编辑器实例，释放资源。
-
-
-
-### 2.4 使用示例
-
-```ts
-import { LeafletEditRectangle } from 'leaflet-geo-tools';
-import * as L from 'leaflet';
-
-const map = L.map('map').setView([31.2, 120.6], 13);
-
-// 初始化编辑器（进入绘制模式）
-const editor = new LeafletEditRectangle(map, {
-  color: 'orange',
-  fillColor: 'yellow',
-  weight: 2
-});
-
-// 或加载已有矩形（进入查看模式）
-const editor = new LeafletEditRectangle(map, {
-  color: 'green'
-}, {
-  type: 'Polygon',
-  coordinates: [[[120.6, 31.2], [120.7, 31.2], [120.7, 31.3], [120.6, 31.3], [120.6, 31.2]]]
-});
-
-// 获取绘制结果
-const geojson = editor.geojson();
-
-// 控制图层显隐
-editor.setVisible(false);
-
-// 销毁图层
-editor.destroy();
-
-// 监听状态变化
-editor.onStateChange((state) => {
-  console.log('当前状态：', state); // Idle / Drawing / Editing
-});
-```
+> ⚠️ **注意**：构造函数调用后立即进入绘制模式，地图光标会变为十字准星（crosshair），用户需在地图上点击一次即可完成绘制。
 
 ---
 
+#### 4.1.2 事件监听
 
-## 3. LeafletCircle 
-
-LeafletCircle 是一个基于 Leaflet 的圆形绘制工具组件，适用于地图标注、范围圈选、空间分析等场景。  
-该组件专注于“绘制 → 获取结果 → 监听状态”，不暴露图层对象，仅提供必要的坐标输出与状态监听机制。
-
----
-
-### 3.1 构造函数
-
-```ts
-new LeafletCircle(
-  map: L.Map,
-  options?: L.CircleOptions
-)
-```
-
-| 参数名 | 类型 | 是否必填 | 说明 |
-|--------|------|----------|------|
-| `map` | `L.Map` | ✅ | Leaflet 地图实例 |
-| `options` | `L.CircleOptions` | ❌ | 圆图层样式配置（如 color、fillColor、radius 等） |
-
-> ⚠️ 构造函数调用后即进入绘制模式，用户需在地图上点击两次：第一次确定圆心，第二次确定半径。
-
----
-
-### 3.2 事件监听
-
-#### `onStateChange(callback: (state: PolygonEditorState) => void): void`
+##### `onStateChange(callback: (state: PolygonEditorState) => void): void`
 
 注册一个回调函数，用于监听绘制状态的变化。
 
-##### 状态枚举：`PolygonEditorState`
-
-| 状态值 | 描述 |
-|--------|------|
-| `Idle` | 空闲状态，未处于绘制中 |
-| `Drawing` | 正在绘制圆形 |
-
-##### 示例：
+**示例：**
 
 ```ts
-circleTool.onStateChange((state) => {
-  if (state === 'Drawing') {
-    console.log('正在绘制圆...');
-  } else {
-    console.log('绘制完成，进入空闲状态');
+import { MarkerPoint, PolygonEditorState } from 'leaflet-geo-tools';
+
+markerTool.onStateChange((state) => {
+  if (state === PolygonEditorState.Drawing) {
+    console.log('等待用户点击绘制点...');
+  } else if (state === PolygonEditorState.Idle) {
+    console.log('点绘制完成');
   }
 });
 ```
 
 ---
 
-### 3.3 公共方法
+#### 4.1.3 公共方法
 
-#### `geojson(): GeoJSON.Feature`
-返回绘制完成后的圆形 GeoJSON 数据（类型为 Polygon）。
+##### `geojson(): GeoJSON.Feature<GeoJSON.Point>`
 
-> ⚠️ 若尚未完成绘制，将抛出异常。
+返回绘制完成后的点坐标 GeoJSON 数据（类型为 Point）。
 
+**异常：** 若尚未绘制点，将抛出错误
 
-#### `destroy(): void`
-销毁图层并清除地图事件监听，释放资源。
+##### `destroy(): void`
 
+销毁图层并清除所有地图事件监听。
 
-#### `offStateChange(listener: (state: PolygonEditorState) => void): void`
+##### `offStateChange(listener: (state: PolygonEditorState) => void): void`
+
 移除指定的状态监听器。
 
+---
 
-### 3.4 使用示例
+#### 4.1.4 使用示例
+
+```ts
+import { MarkerPoint, PolygonEditorState } from 'leaflet-geo-tools';
+import * as L from 'leaflet';
+
+// 初始化地图
+const map = L.map('map').setView([31.23, 121.47], 13);
+
+// 初始化点绘制工具
+const markerTool = new MarkerPoint(map);
+
+// 监听状态变化
+markerTool.onStateChange((state) => {
+    if (state === PolygonEditorState.Idle) {
+        // 绘制完成，获取坐标数据
+        const geojson = markerTool.geojson();
+        console.log('点坐标数据:', geojson);
+    }
+});
+```
+
+---
+
+### 4.2 LeafletPolyline（折线绘制）
+
+LeafletPolyline 是一个基于 Leaflet 的折线绘制工具组件，适用于路径绘制、轨迹标记、线路规划等场景。
+
+---
+
+#### 4.2.1 构造函数
+
+```ts
+import { LeafletPolyline } from 'leaflet-geo-tools';
+import * as L from 'leaflet';
+
+const polylineTool = new LeafletPolyline(
+  map: L.Map,
+  options?: L.PolylineOptions
+);
+```
+
+| 参数名 | 类型 | 是否必填 | 说明 |
+|--------|------|----------|------|
+| `map` | `L.Map` | ✅ | Leaflet 地图实例 |
+| `options` | `L.PolylineOptions` | ❌ | 折线样式配置 |
+
+> ⚠️ **注意**：构造函数调用后立即进入绘制模式，双击鼠标完成绘制。
+
+---
+
+#### 4.2.2 公共方法
+
+##### `geojson(): GeoJSON.Feature<GeoJSON.LineString>`
+
+返回绘制完成后的折线 GeoJSON 数据（类型为 LineString）。
+
+**异常：** 若尚未完成绘制，将抛出错误
+
+##### `destroy(): void`
+
+销毁图层并清除所有地图事件监听。
+
+##### `onStateChange()`, `offStateChange()`
+
+与其他组件相同的事件监听方法。
+
+---
+
+#### 4.2.3 使用示例
+
+```ts
+import { LeafletPolyline } from 'leaflet-geo-tools';
+import * as L from 'leaflet';
+
+const map = L.map('map').setView([31.23, 121.47], 13);
+const polylineTool = new LeafletPolyline(map, {
+  color: 'blue',
+  weight: 3
+});
+
+polylineTool.onStateChange((state) => {
+    if (state === 'Idle') {
+        const geojson = polylineTool.geojson();
+        console.log('折线数据:', geojson);
+    }
+});
+```
+
+---
+
+### 4.3 LeafletPolygon（多边形绘制）
+
+LeafletPolygon 是一个基于 Leaflet 的多边形绘制工具组件，适用于区域标注、范围圈选、地理围栏等场景。
+
+---
+
+#### 4.3.1 构造函数
+
+```ts
+import { LeafletPolygon } from 'leaflet-geo-tools';
+import * as L from 'leaflet';
+
+const polygonTool = new LeafletPolygon(
+  map: L.Map,
+  options?: L.PolylineOptions
+);
+```
+
+| 参数名 | 类型 | 是否必填 | 说明 |
+|--------|------|----------|------|
+| `map` | `L.Map` | ✅ | Leaflet 地图实例 |
+| `options` | `L.PolylineOptions` | ❌ | 多边形样式配置 |
+
+> ⚠️ **注意**：构造函数调用后立即进入绘制模式，双击鼠标完成绘制并自动闭合多边形。
+
+---
+
+#### 4.3.2 公共方法
+
+##### `geojson(): GeoJSON.Feature<GeoJSON.Polygon>`
+
+返回绘制完成后的多边形 GeoJSON 数据（类型为 Polygon，已自动闭合）。
+
+**异常：** 若尚未完成绘制，将抛出错误
+
+---
+
+#### 4.3.3 使用示例
+
+```ts
+import { LeafletPolygon } from 'leaflet-geo-tools';
+import * as L from 'leaflet';
+
+const map = L.map('map').setView([31.23, 121.47], 13);
+const polygonTool = new LeafletPolygon(map, {
+  color: 'green',
+  fillColor: '#00ff00',
+  fillOpacity: 0.3
+});
+```
+
+---
+
+### 4.4 LeafletRectangle（矩形绘制）
+
+LeafletRectangle 是一个基于 Leaflet 的矩形绘制工具组件，适用于框选区域、范围标注、地理筛选等场景。
+
+---
+
+#### 4.4.1 构造函数
+
+```ts
+import { LeafletRectangle } from 'leaflet-geo-tools';
+import * as L from 'leaflet';
+
+const rectangleTool = new LeafletRectangle(
+  map: L.Map,
+  options?: L.PolylineOptions
+);
+```
+
+| 参数名 | 类型 | 是否必填 | 说明 |
+|--------|------|----------|------|
+| `map` | `L.Map` | ✅ | Leaflet 地图实例 |
+| `options` | `L.PolylineOptions` | ❌ | 矩形样式配置 |
+
+> ⚠️ **注意**：构造函数调用后立即进入绘制模式，需要两次点击完成绘制（第一次确定起点，第二次确定对角点）。
+
+---
+
+#### 4.4.2 使用示例
+
+```ts
+import { LeafletRectangle } from 'leaflet-geo-tools';
+import * as L from 'leaflet';
+
+const map = L.map('map').setView([31.23, 121.47], 13);
+const rectangleTool = new LeafletRectangle(map, {
+  color: 'orange',
+  fillColor: '#ffa500',
+  fillOpacity: 0.3
+});
+```
+
+---
+
+### 4.5 LeafletCircle（圆形绘制）
+
+LeafletCircle 是一个基于 Leaflet 的圆形绘制工具组件，适用于圆形区域标注、范围圈选等场景。
+
+---
+
+#### 4.5.1 构造函数
 
 ```ts
 import { LeafletCircle } from 'leaflet-geo-tools';
 import * as L from 'leaflet';
 
-const map = L.map('map').setView([31.2, 120.6], 13);
+const circleTool = new LeafletCircle(
+  map: L.Map,
+  options?: L.CircleOptions
+);
+```
 
-// 初始化绘制圆工具（进入绘制模式）
+| 参数名 | 类型 | 是否必填 | 说明 |
+|--------|------|----------|------|
+| `map` | `L.Map` | ✅ | Leaflet 地图实例 |
+| `options` | `L.CircleOptions` | ❌ | 圆形样式配置 |
+
+> ⚠️ **注意**：构造函数调用后立即进入绘制模式，需要两次点击完成绘制（第一次确定圆心，第二次确定半径）。
+
+---
+
+#### 4.5.2 公共方法
+
+##### `geojson(): GeoJSON.Feature<GeoJSON.Polygon>`
+
+返回绘制完成后的圆形 GeoJSON 数据（使用 turf.js 转换为多边形表示）。
+
+**异常：** 若尚未完成绘制，将抛出错误
+
+---
+
+#### 4.5.3 使用示例
+
+```ts
+import { LeafletCircle } from 'leaflet-geo-tools';
+import * as L from 'leaflet';
+
+const map = L.map('map').setView([31.23, 121.47], 13);
 const circleTool = new LeafletCircle(map, {
-  color: 'red',
-  fillColor: 'pink',
-  fillOpacity: 0.4
+  color: 'purple',
+  fillColor: '#800080',
+  fillOpacity: 0.3
 });
-
-// 监听状态变化
-circleTool.onStateChange((state) => {
-  if (state === 'Idle') {
-    const geojson = circleTool.geojson();
-    console.log('绘制完成，结果为：', geojson);
-  }
-});
-
-// 销毁图层
-// circleTool.destroy();
 ```
 
 ---
+
+## 5. 测量工具 (Measure)
+
+### 5.1 LeafletArea（面积测量）
+
+LeafletArea 是一个基于 Leaflet 的面积测量工具，支持多边形面积测量并实时显示测量结果。
+
+---
+
+#### 5.1.1 构造函数
+
+```ts
+import { LeafletArea } from 'leaflet-geo-tools';
+import * as L from 'leaflet';
+
+const areaTool = new LeafletArea(
+  map: L.Map,
+  measureOptions?: areaOptions,
+  options?: L.PolylineOptions
+);
+```
+
+| 参数名 | 类型 | 是否必填 | 说明 |
+|--------|------|----------|------|
+| `map` | `L.Map` | ✅ | Leaflet 地图实例 |
+| `measureOptions` | `areaOptions` | ❌ | 测量配置选项 |
+| `options` | `L.PolylineOptions` | ❌ | 多边形样式配置 |
+
+**areaOptions 默认值：**
+```ts
+{
+    precision: 2,   // 精度
+    lang: 'zh'      // 语言
+}
+```
+
+> ⚠️ **注意**：构造函数调用后立即进入绘制模式，双击鼠标完成多边形绘制并计算面积。
+
+---
+
+#### 5.1.2 使用示例
+
+```ts
+import { LeafletArea, PolygonEditorState } from 'leaflet-geo-tools';
+import * as L from 'leaflet';
+
+const map = L.map('map').setView([31.23, 121.47], 13);
+const areaTool = new LeafletArea(map, {
+    precision: 2,
+    lang: 'zh'
+}, {
+    color: 'red',
+    fillColor: '#ff0000',
+    fillOpacity: 0.3
+});
+
+areaTool.onStateChange((state) => {
+    if (state === PolygonEditorState.Idle) {
+        const geojson = areaTool.geojson();
+        console.log('测量区域数据:', geojson);
+    }
+});
+```
+
+---
+
+### 5.2 LeafletDistance（距离测量）
+
+LeafletDistance 是一个基于 Leaflet 的距离测量工具，支持多点连续距离测量并实时显示分段和总距离。
+
+---
+
+#### 5.2.1 构造函数
+
+```ts
+import { LeafletDistance } from 'leaflet-geo-tools';
+import * as L from 'leaflet';
+
+const distanceTool = new LeafletDistance(
+  map: L.Map,
+  measureOptions?: distanceOptions,
+  options?: L.PolylineOptions
+);
+```
+
+| 参数名 | 类型 | 是否必填 | 说明 |
+|--------|------|----------|------|
+| `map` | `L.Map` | ✅ | Leaflet 地图实例 |
+| `measureOptions` | `distanceOptions` | ❌ | 测量配置选项 |
+| `options` | `L.PolylineOptions` | ❌ | 折线样式配置 |
+
+**distanceOptions 默认值：**
+```ts
+{
+    units: 'meters',   // 单位
+    precision: 2,      // 精度
+    lang: 'zh'         // 语言
+}
+```
+
+> ⚠️ **注意**：构造函数调用后立即进入绘制模式，双击鼠标完成测量。
+
+---
+
+#### 5.2.2 使用示例
+
+```ts
+import { LeafletDistance } from 'leaflet-geo-tools';
+import * as L from 'leaflet';
+
+const map = L.map('map').setView([31.23, 121.47], 13);
+const distanceTool = new LeafletDistance(map, {
+    units: 'meters',
+    precision: 2,
+    lang: 'zh'
+}, {
+    color: 'blue',
+    weight: 3,
+    opacity: 0.8
+});
+```
+
+---
+
+
