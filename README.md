@@ -195,12 +195,17 @@ const existingGeometry = {
     [121.47, 31.23]
   ]]
 };
+// 吸附参数
+const snap: SnapOptions = {
+    enabled: true,
+    modes: ['edge', 'vertex']
+};
 
 // 创建编辑器并传入现有图形
-const editor = new LeafletRectangleEditor(map, {}, existingGeometry);
+const editor = new LeafletRectangleEditor(map, { snap }, existingGeometry);
 
 // 双击图形进入编辑模式
-// 支持：拖动顶点、插入中点、删除顶点（右键顶点触发删除）、拖动整个面
+// 支持：拖动顶点、插入中点、删除顶点（右键顶点触发删除）、拖动整个面、顶点吸附
 ```
 
 
@@ -281,4 +286,10 @@ npm run test:coverage
 ### v0.1.1 (2025-12-29)
 - ✅ topo基本操作（线裁剪、合并面）
 - 🎯 整形要素工具（Reshape Feature）
+- 🎯 ...
+### v0.1.2 (2026-01-09)
+- ✅ topo基本操作（线裁剪、合并面）
+- ✅ 整形要素工具（Reshape Feature）
+- ✅ 拖动边、顶点吸附功能
+- 🎯 魔棒选择工具（Magic Wand）
 - 🎯 ...
