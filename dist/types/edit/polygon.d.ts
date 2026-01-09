@@ -170,7 +170,30 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
      * @memberof LeafletEditPolygon
      */
     private insertMidpointMarkers;
-    /** 实时更新中线点的位置
+    /** 创建一个中点标记
+     *
+     *
+     * @private
+     * @param {L.Marker} p1 起点 marker
+     * @param {L.Marker} p2 终点 marker
+     * @param {number} polygonIndex 多边形索引
+     * @param {number} ringIndex 环索引
+     * @param {number} insertIndex 插入点的位置
+     * @param {number} positionRadio 位置比率
+     * @return {*}  {L.Marker}
+     * @memberof LeafletPolygonEditor
+     */
+    private createInsertMidpointMarker;
+    /** 创建一个可拖动的边控制点，用于拖动整条边
+     * @param p1 起点 marker
+     * @param p2 终点 marker
+     * @param polygonIndex 多边形索引
+     * @param ringIndex 环索引
+     * @param {number} positionRadio 位置比率
+     * @returns L.Marker
+     */
+    private createEdgeDragMarker;
+    /** 实时更新中线点的位置（传参意思：用户正在拖动的避免销毁和重新构建）
      *
      *
      * @private
@@ -210,14 +233,22 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
      * @memberof LeafletEditRectangle
      */
     private isClickOnMyLayer;
-    /** 这个函数只是用于校验编辑的逻辑，不能写在事件的最顶部，因为如果是绘制事件，则不应该增加这个校验，否则会出现无法完成绘制的bug
+    private canConsume;
+    /** 转换【多边形】的GeoJSON数据为Leaflet可接受的格式
      *
      *
      * @private
-     * @param {L.LeafletMouseEvent} e
-     * @return {*}  {boolean}
+     * @param {GeoJSON.Geometry} geometry
+     * @return {*}  {(L.LatLngExpression[][] | L.LatLngExpression[][][])}
      * @memberof LeafletPolygonEditor
      */
-    private canConsume;
     private convertGeoJSONToLatLngs;
+    /**
+     * 获取边上某个比例位置的点（例如 1/3、2/3）
+     * @param p1 起点
+     * @param p2 终点
+     * @param ratio 比例（0~1），例如 1/3 = 0.333
+     * @returns L.LatLng
+     */
+    private getFractionalPointOnEdge;
 }

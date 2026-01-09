@@ -1,10 +1,13 @@
+import { type MidpointPair, type SnapOptions } from "../types";
 import { BaseEditor } from "./BaseEditor";
 export declare abstract class BasePolygonEditor extends BaseEditor {
     protected vertexMarkers: L.Marker[][][];
-    protected midpointMarkers: L.Marker[][][];
+    protected midpointMarkers: MidpointPair[][][];
     protected historyStack: number[][][][][];
     protected redoStack: number[][][][][];
-    constructor(map: L.Map);
+    constructor(map: L.Map, options: {
+        snap?: SnapOptions;
+    });
     /** 撤回到上一步
      *
      *
@@ -39,6 +42,12 @@ export declare abstract class BasePolygonEditor extends BaseEditor {
      * @memberof LeafletEditRectangle
      */
     reset(): void;
+    /** 移除所有中点标记（若存在正在拖动的，则跳过）
+     *
+     *
+     * @memberof BasePolygonEditor
+     */
+    removeAllMidPointMarkers(skipMarker?: L.Marker): void;
     /** 根据坐标重建 marker 和图形 + 重新渲染图层
      *
      *

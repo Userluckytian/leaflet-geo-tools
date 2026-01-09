@@ -58,12 +58,14 @@ typeof SuppressedError === "function" ? SuppressedError : function (error, suppr
     return e.name = "SuppressedError", e.error = error, e.suppressed = suppressed, e;
 };
 
+// #endregion 
 var PolygonEditorState;
 (function (PolygonEditorState) {
     PolygonEditorState["Idle"] = "idle";
     PolygonEditorState["Drawing"] = "drawing";
     PolygonEditorState["Editing"] = "editing"; // 正在编辑
 })(PolygonEditorState || (PolygonEditorState = {}));
+// #endregion
 
 var km_value = 1000; // 1千米 = 1000米
 var LeafletCircle = /** @class */ (function () {
@@ -1064,17 +1066,186 @@ var LeafletRectangle = /** @class */ (function () {
     return LeafletRectangle;
 }());
 
+/**
+ * 1：吸附源是谁?
+ * 假设图上有abc三个几何图形，然后你此刻在编辑C几何图层，那么吸附源就是除去C几何图层外的其他两个图层A和B。比如A和B均是多边形，我要先收集A和B的全部顶点。以拖动C几何中的一个顶点p1为例，我就要把P1和AB图层的所有顶点进行比较，来判断吸附到谁身上。综上: 吸附源是【A和B的全部顶点】。
+ * 2: 后续我想在页面放置按钮：1：开启吸附、关闭吸附 2：吸附方式: 顶点吸附、线吸附。针对2我不确定应该是自动判断还是让用户选择(根据用户拖动的内容来自动选择吸附模式，留个口子，可能只要线吸附或者顶点吸附)
+ * 3:对于数据格式，我们可以提前整理出一个处理好的拆分数据结构，比如：
+ * const draggedGeometry = {
+ *   type: 'polygon', // 或 'polyline'
+ *   vertices: [p1, p2, p3, p4], // 所有顶点
+ *   edges: [         // 所有边（线段）
+ *     {start: p1, end: p2},
+ *     {start: p2, end: p3},
+ *     // ...
+ *   ],
+ *   bounds: {minX, minY, maxX, maxY}, // 包围盒(这个是否需要),
+ *   geometry: {...}
+ * };
+ * 4:地图编辑中可能有大量几何元素，需要优化, 只在拖动点周围查询
+ * 5: 对于顶点吸附：以拖动C几何中的一个顶点p1为例，我就要把从周围获取的顶点都进行比较，来判断吸附到谁身上
+ * 6：对于线吸附：采用平行边投影吸附（暂时未使用线和线的吸附，因为arcgis没有好像）
+ *     6.1：我拖动的是一条边 E = [P₁, P₂]。
+ *     6.2：吸附源是其他周围的边集合 E' = {[A₁, A₂], [B₁, B₂], ...}。
+ *     6.3. 判断E与E'中每条边是否近似平行（允许小误差）,（注意这里，如果E和E'是交叉的，只要角度小于某个阈值，则仍旧认为平行），平行则继续
+ *     6.4 计算P1到E'中平行线的距离d1，P2到E'线的距离d2
+ *     6.5. 计算平均距离 d_avg = (d1 + d2) / 2
+ *     6.6. 如果 d_avg < 阈值 → 吸附
+ *     6.7. 吸附时：将E整条边平行移动到E'对应的平行边上
+ *
+ */
+var SnapController = /** @class */ (function () {
+    function SnapController(map) {
+        this.tolerance = 8; // px
+        this.modes = ['vertex'];
+        this.vertexSources = []; // 顶点吸附源
+        this.edgeSources = []; // 边缘吸附源
+        this.map = map;
+    }
+    /** 设置阈值
+     *
+     *
+     * @param {number} tolerance
+     * @memberof SnapController
+     */
+    SnapController.prototype.setTolerance = function (tolerance) {
+        this.tolerance = tolerance;
+    };
+    /** 设置吸附模式
+     *
+     *
+     * @param {SnapMode[]} modes
+     * @memberof SnapController
+     */
+    SnapController.prototype.setModes = function (modes) {
+        this.modes = modes;
+    };
+    /** 设置吸附源
+     *
+     *
+     * @param {L.LatLng[]} points
+     * @memberof SnapController
+     */
+    SnapController.prototype.setGeometrySources = function (indices) {
+        this.vertexSources = indices.flatMap(function (i) { return i.vertices; });
+        this.edgeSources = indices.flatMap(function (i) { return i.edges; });
+        console.log('吸附源：', this.vertexSources, this.edgeSources);
+    };
+    /** 顶点吸附
+     *
+     *
+     * @param {L.LatLng} input
+     * @return {*}  {(L.LatLng | null)}
+     * @memberof SnapController
+     */
+    SnapController.prototype.snapVertex = function (input) {
+        var _a;
+        if (!this.modes.includes('vertex'))
+            return null;
+        var inputPx = this.map.latLngToLayerPoint(input);
+        var closest = null;
+        for (var _i = 0, _b = this.vertexSources; _i < _b.length; _i++) {
+            var p = _b[_i];
+            var pPx = this.map.latLngToLayerPoint(p);
+            var dist = inputPx.distanceTo(pPx);
+            if (dist < this.tolerance && (!closest || dist < closest.dist)) {
+                closest = { point: p, dist: dist };
+            }
+        }
+        return (_a = closest === null || closest === void 0 ? void 0 : closest.point) !== null && _a !== void 0 ? _a : null;
+    };
+    /** 返回输入点即将吸附的目标边线
+     *
+     *
+     * @param {L.LatLng} input
+     * @return {*}  {({ start: L.LatLng; end: L.LatLng } | null)}
+     * @memberof SnapController
+     */
+    SnapController.prototype.getClosestEdge = function (input) {
+        var closest = null;
+        var minDistance = Infinity;
+        var inputPx = this.map.latLngToLayerPoint(input);
+        for (var _i = 0, _a = this.edgeSources; _i < _a.length; _i++) {
+            var edge = _a[_i];
+            var projected = this.projectPointToSegment(input, edge.start, edge.end);
+            var projectedPx = this.map.latLngToContainerPoint(projected);
+            // 像素距离计算
+            var distance = inputPx.distanceTo(projectedPx);
+            if (distance < minDistance && distance <= this.tolerance) {
+                minDistance = distance;
+                closest = edge;
+            }
+        }
+        return closest;
+    };
+    /** 边线吸附
+     *
+     *
+     * @protected
+     * @param {L.LatLng} latlng
+     * @return {*}  {(L.LatLng | null)}
+     * @memberof BaseEditor
+     */
+    SnapController.prototype.snapEdge = function (latlng) {
+        if (!this.edgeSources.length)
+            return null;
+        var latlngPx = this.map.latLngToContainerPoint(latlng);
+        var closestPoint = null;
+        var minDistance = Infinity;
+        for (var _i = 0, _a = this.edgeSources; _i < _a.length; _i++) {
+            var _b = _a[_i], start = _b.start, end = _b.end;
+            var projected = this.projectPointToSegment(latlng, start, end);
+            // 使用像素坐标计算距离
+            var projectedPx = this.map.latLngToContainerPoint(projected);
+            var distancePx = latlngPx.distanceTo(projectedPx);
+            if (distancePx < minDistance && distancePx <= this.tolerance) {
+                minDistance = distancePx;
+                closestPoint = projected;
+            }
+        }
+        return closestPoint;
+    };
+    /** 将一个点 p 投影到一条线段 ab 上，返回投影点的位置。
+     *
+     *
+     * @private
+     * @param {L.LatLng} p
+     * @param {L.LatLng} a
+     * @param {L.LatLng} b
+     * @return {*}  {L.LatLng}
+     * @memberof SnapController
+     */
+    SnapController.prototype.projectPointToSegment = function (p, a, b) {
+        var ax = a.lng, ay = a.lat;
+        var bx = b.lng, by = b.lat;
+        var px = p.lng, py = p.lat;
+        var dx = bx - ax;
+        var dy = by - ay;
+        if (dx === 0 && dy === 0)
+            return a;
+        var t = ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy);
+        var clampedT = Math.max(0, Math.min(1, t));
+        return L.latLng(ay + clampedT * dy, ax + clampedT * dx);
+    };
+    return SnapController;
+}());
+
 // BaseEditor.ts - 基础形状编辑器
 var BaseEditor = /** @class */ (function () {
-    function BaseEditor(map) {
+    function BaseEditor(map, options) {
         this.currentState = PolygonEditorState.Idle; // 当前状态
         this.stateListeners = []; // 状态监听器存储数组，比如来了多个监听函数，触发的时候，要遍历全部监听函数。
         this.isDraggingPolygon = false; // 是否是拖动多边形
         this.dragStartLatLng = null; // 拖动多边形时，用户鼠标按下（mousedown）那一刻的坐标点，然后鼠标移动（mousemove）时，遍历全部的marker，做坐标偏移计算。
         this.isVisible = true; // 图层可见性
+        this.highlightCircleMarker = null; // 吸附时，高亮显示的marker
+        this.highlightEdgeLayer = null; // 吸附时，高亮显示的边线
         if (!map)
             throw new Error('传入的地图对象异常，请先确保地图对象已实例完成。');
         this.map = map;
+        // 初始化吸附控制器 
+        this.snapHighlightLayer = L.layerGroup().addTo(map);
+        this.initSnap(map, options === null || options === void 0 ? void 0 : options.snap);
     }
     // #region 实例是否是激活状态（编辑时，就是激活态，否则就是非激活态，这时，关闭全部事件） 
     /**
@@ -1094,8 +1265,8 @@ var BaseEditor = /** @class */ (function () {
         BaseEditor.currentActiveEditor = this;
     };
     /**
-         * 停用当前编辑器实例
-         */
+     * 停用当前编辑器实例
+     */
     BaseEditor.prototype.deactivate = function () {
         // console.log('停用编辑器:', this.constructor.name);
         if (BaseEditor.currentActiveEditor === this) {
@@ -1180,6 +1351,275 @@ var BaseEditor = /** @class */ (function () {
     BaseEditor.prototype.clearAllStateListeners = function () {
         this.stateListeners = [];
     };
+    // #endregion
+    // #region 吸附行为
+    /*
+    arcgis，
+    1：拖动面时，不进行吸附行为，
+    2：拖动点接近另一个点时，点被吸附到一起，
+    3：拖动一个点接近一条线时，点会被吸附到线上
+    4：拖动一条线接近另一条线时，会根据鼠标按下拖动的那个坐标去吸附目标线，而拖动的线会跟着跑，同步的图形也在变化
+     */
+    /** 初始化吸附控制器
+     *
+     *
+     * @protected
+     * @param {L.Map} map
+     * @param {SnapOptions} [snap]
+     * @memberof BaseEditor
+     */
+    BaseEditor.prototype.initSnap = function (map, snap) {
+        var _a, _b;
+        if (!(snap === null || snap === void 0 ? void 0 : snap.enabled))
+            return;
+        this.snapController = new SnapController(map);
+        this.snapController.setModes((_a = snap.modes) !== null && _a !== void 0 ? _a : ['vertex']);
+        this.snapController.setTolerance((_b = snap.tolerance) !== null && _b !== void 0 ? _b : 8);
+    };
+    /** 【吸附器】确定最终的坐标(顶点会去吸附边和其他顶点)
+     *
+     *
+     * @protected
+     * @param {L.LatLng} latlng
+     * @return {*}  {L.LatLng}
+     * @memberof BaseEditor
+     */
+    BaseEditor.prototype.applySnapWithTarget = function (latlng, autoHighlight) {
+        var _a, _b, _c, _d, _e, _f;
+        if (autoHighlight === void 0) { autoHighlight = true; }
+        // 移除高亮的图层
+        this.clearSnapHighlights();
+        var snappedVertex = (_b = (_a = this.snapController) === null || _a === void 0 ? void 0 : _a.snapVertex) === null || _b === void 0 ? void 0 : _b.call(_a, latlng);
+        if (snappedVertex) {
+            console.log('顶点吸附：', snappedVertex);
+            if (autoHighlight)
+                this.highlightPoint(snappedVertex); // ✅ 自动高亮
+            return {
+                snappedLatLng: snappedVertex,
+                snapped: true,
+                type: 'vertex',
+                target: snappedVertex
+            };
+        }
+        var snappedEdge = (_d = (_c = this.snapController) === null || _c === void 0 ? void 0 : _c.snapEdge) === null || _d === void 0 ? void 0 : _d.call(_c, latlng);
+        if (snappedEdge) {
+            console.log('边缘吸附：', snappedEdge);
+            var edge = (_f = (_e = this.snapController) === null || _e === void 0 ? void 0 : _e.getClosestEdge) === null || _f === void 0 ? void 0 : _f.call(_e, latlng); // 返回输入点即将吸附的目标边线
+            if (autoHighlight && edge)
+                this.highlightEdge(edge); // ✅ 自动高亮
+            return {
+                snappedLatLng: snappedEdge,
+                snapped: true,
+                type: 'edge',
+                target: edge
+            };
+        }
+        return {
+            snappedLatLng: latlng,
+            snapped: false
+        };
+    };
+    /** 【顶点吸附器】收集所有其他图层的顶点信息
+     *
+     *
+     * @protected
+     * @param {L.Map} map
+     * @param {L.Layer} excludeLayer
+     * @return {*}  {L.LatLng[]}
+     * @memberof BaseEditor
+     */
+    BaseEditor.prototype.collectAllOtherGeometryIndices = function (map, excludeLayer) {
+        var _this = this;
+        var indices = [];
+        map.eachLayer(function (layer) {
+            if (layer !== excludeLayer && layer.toGeoJSON) {
+                var geo = layer.toGeoJSON();
+                var geometry = geo.type === 'Feature' ? geo.geometry : geo;
+                try {
+                    var index = _this.buildGeometryIndex(geometry);
+                    indices.push(index);
+                }
+                catch (e) {
+                    console.warn('跳过不支持的图层类型', e);
+                }
+            }
+        });
+        return indices;
+    };
+    /** 高亮吸附目标点
+     *
+     *
+     * @protected
+     * @param {{ start: L.LatLng; end: L.LatLng }} edge
+     * @memberof BaseEditor
+     */
+    BaseEditor.prototype.highlightPoint = function (latlng) {
+        // 清除上一次的高亮图层
+        if (this.highlightCircleMarker) {
+            this.highlightCircleMarker.remove();
+            this.highlightCircleMarker = null;
+        }
+        var marker = L.circleMarker(latlng, {
+            radius: 15,
+            color: '#00ff00',
+            weight: 2,
+            fillOpacity: 0.8
+        });
+        this.snapHighlightLayer.addLayer(marker);
+        this.highlightCircleMarker = marker;
+    };
+    /** 高亮吸附目标线段
+     *
+     *
+     * @protected
+     * @param {{ start: L.LatLng; end: L.LatLng }} edge
+     * @memberof BaseEditor
+     */
+    BaseEditor.prototype.highlightEdge = function (edge) {
+        // 移除上次吸附高亮图层
+        if (this.highlightEdgeLayer) {
+            this.highlightEdgeLayer.remove();
+            this.highlightEdgeLayer = null;
+        }
+        // 添加新的高亮图层
+        var edgeLine = L.polyline([edge.start, edge.end], {
+            color: '#00ff00',
+            weight: 5,
+            dashArray: '4,2',
+            pane: 'overlayPane'
+        });
+        this.snapHighlightLayer.addLayer(edgeLine);
+        this.highlightEdgeLayer = edgeLine;
+    };
+    /** 移除上次吸附高亮图层
+     *
+     *
+     * @protected
+     * @memberof BaseEditor
+     */
+    BaseEditor.prototype.clearSnapHighlights = function () {
+        // 清除上一次的高亮图层
+        this.snapHighlightLayer.clearLayers();
+        this.highlightCircleMarker = null;
+        this.highlightEdgeLayer = null;
+    };
+    // 清理吸附相关资源的方法
+    BaseEditor.prototype.cleanupSnapResources = function () {
+        // 1. 清理高亮层
+        this.clearSnapHighlights();
+        this.map.removeLayer(this.snapHighlightLayer);
+        // 2. 清理吸附控制器
+        this.snapController = undefined;
+    };
+    // #endregion
+    // #region 辅助函数
+    /** 提取多边形的坐标点（全部平铺到一个数组中）
+     *
+     *
+     * @protected
+     * @param {GeoJSON.GeoJSON} geo
+     * @return {*}  {L.LatLng[]}
+     * @memberof BaseEditor
+     */
+    BaseEditor.prototype.extractVerticesFromGeoJSON = function (geo) {
+        var result = [];
+        if (geo.type === 'Feature')
+            geo = geo.geometry;
+        if (geo.type === 'Polygon') {
+            geo.coordinates.forEach(function (ring) {
+                return ring.forEach(function (_a) {
+                    var lng = _a[0], lat = _a[1];
+                    return result.push(L.latLng(lat, lng));
+                });
+            });
+        }
+        else if (geo.type === 'MultiPolygon') {
+            geo.coordinates.forEach(function (polygon) {
+                return polygon.forEach(function (ring) {
+                    return ring.forEach(function (_a) {
+                        var lng = _a[0], lat = _a[1];
+                        return result.push(L.latLng(lat, lng));
+                    });
+                });
+            });
+        }
+        return result;
+    };
+    /** 构建空间数据索引
+     *
+     *
+     * @protected
+     * @param {GeoJSON.Geometry} geometry
+     * @return {*}  {GeometryIndex}
+     * @memberof BaseEditor
+     */
+    BaseEditor.prototype.buildGeometryIndex = function (geometry) {
+        var vertices = [];
+        var edges = [];
+        if (geometry.type === 'Polygon') {
+            geometry.coordinates.forEach(function (ring) {
+                var ringPoints = ring.map(function (_a) {
+                    var lng = _a[0], lat = _a[1];
+                    return L.latLng(lat, lng);
+                });
+                vertices.push.apply(vertices, ringPoints);
+                for (var i = 0; i < ringPoints.length; i++) {
+                    var start = ringPoints[i];
+                    var end = ringPoints[(i + 1) % ringPoints.length]; // 闭合
+                    edges.push({ start: start, end: end });
+                }
+            });
+        }
+        else if (geometry.type === 'MultiPolygon') {
+            geometry.coordinates.forEach(function (polygon) {
+                polygon.forEach(function (ring) {
+                    var ringPoints = ring.map(function (_a) {
+                        var lng = _a[0], lat = _a[1];
+                        return L.latLng(lat, lng);
+                    });
+                    vertices.push.apply(vertices, ringPoints);
+                    for (var i = 0; i < ringPoints.length; i++) {
+                        var start = ringPoints[i];
+                        var end = ringPoints[(i + 1) % ringPoints.length];
+                        edges.push({ start: start, end: end });
+                    }
+                });
+            });
+        }
+        else if (geometry.type === 'LineString') {
+            var linePoints = geometry.coordinates.map(function (_a) {
+                var lng = _a[0], lat = _a[1];
+                return L.latLng(lat, lng);
+            });
+            vertices.push.apply(vertices, linePoints);
+            for (var i = 0; i < linePoints.length - 1; i++) {
+                edges.push({ start: linePoints[i], end: linePoints[i + 1] });
+            }
+        }
+        else if (geometry.type === 'MultiLineString') {
+            geometry.coordinates.forEach(function (line) {
+                var linePoints = line.map(function (_a) {
+                    var lng = _a[0], lat = _a[1];
+                    return L.latLng(lat, lng);
+                });
+                vertices.push.apply(vertices, linePoints);
+                for (var i = 0; i < linePoints.length - 1; i++) {
+                    edges.push({ start: linePoints[i], end: linePoints[i + 1] });
+                }
+            });
+        }
+        else {
+            throw new Error("\u4E0D\u652F\u6301\u7684 geometry \u7C7B\u578B: ".concat(geometry.type));
+        }
+        var bounds = L.latLngBounds(vertices);
+        return {
+            type: geometry.type.startsWith('Polygon') ? 'polygon' : 'polyline',
+            vertices: vertices,
+            edges: edges,
+            bounds: bounds,
+            geometry: geometry
+        };
+    };
     // 静态属性 - 所有编辑器实例共享同一个激活状态
     BaseEditor.currentActiveEditor = null;
     return BaseEditor;
@@ -1188,8 +1628,8 @@ var BaseEditor = /** @class */ (function () {
 // BasePolygonEditor.ts - 多边形基类
 var BasePolygonEditor = /** @class */ (function (_super) {
     __extends(BasePolygonEditor, _super);
-    function BasePolygonEditor(map) {
-        var _this = _super.call(this, map) || this;
+    function BasePolygonEditor(map, options) {
+        var _this = _super.call(this, map, options) || this;
         _this.vertexMarkers = []; // 存储顶点标记的数组
         _this.midpointMarkers = []; // 存储【线中点】标记的数组
         _this.historyStack = []; // 历史记录，存储快照
@@ -1275,6 +1715,31 @@ var BasePolygonEditor = /** @class */ (function (_super) {
         // 恢复双击地图放大事件
         this.map.doubleClickZoom.enable();
     };
+    /** 移除所有中点标记（若存在正在拖动的，则跳过）
+     *
+     *
+     * @memberof BasePolygonEditor
+     */
+    BasePolygonEditor.prototype.removeAllMidPointMarkers = function (skipMarker) {
+        var _this = this;
+        var newMidpoints = [];
+        this.midpointMarkers.flat(2).forEach(function (pair) {
+            var keepInsert = pair.insert === skipMarker;
+            var keepEdge = pair.edge === skipMarker;
+            if (!keepInsert) {
+                _this.map.removeLayer(pair.insert);
+            }
+            if (!keepEdge) {
+                _this.map.removeLayer(pair.edge);
+            }
+            // 如果有任一 marker 被保留，就保留这个 pair
+            if (keepInsert || keepEdge) {
+                newMidpoints.push(pair);
+            }
+        });
+        // 重新组织为二维结构（可选）
+        this.midpointMarkers = newMidpoints.length > 0 ? [[__spreadArray([], newMidpoints, true)]] : [];
+    };
     return BasePolygonEditor;
 }(BaseEditor));
 
@@ -1289,7 +1754,7 @@ var LeafletPolygonEditor = /** @class */ (function (_super) {
      */
     function LeafletPolygonEditor(map, options, defaultGeometry) {
         if (options === void 0) { options = {}; }
-        var _this = _super.call(this, map) || this;
+        var _this = _super.call(this, map, { snap: options === null || options === void 0 ? void 0 : options.snap }) || this;
         _this.polygonLayer = null;
         // 图层初始化时
         _this.drawLayerStyle = {
@@ -1615,8 +2080,8 @@ var LeafletPolygonEditor = /** @class */ (function (_super) {
      * @memberof LeafletEditPolygon
      */
     LeafletPolygonEditor.prototype.getLayerVisible = function () {
-        var _a, _b;
-        return (_b = (_a = this.polygonLayer) === null || _a === void 0 ? void 0 : _a.options) === null || _b === void 0 ? void 0 : _b.layerVisible;
+        var _a;
+        return ((_a = this.polygonLayer) === null || _a === void 0 ? void 0 : _a.options).layerVisible;
     };
     /** 销毁图层，从地图中移除图层
      *
@@ -1632,6 +2097,9 @@ var LeafletPolygonEditor = /** @class */ (function (_super) {
         this.deactivate();
         // 编辑模式的内容也重置
         this.exitEditMode();
+        // #endregion
+        // #region 3：吸附用到的内容
+        this.cleanupSnapResources();
         // #endregion
         // #region3：地图相关内容处理（关闭事件监听，恢复部分交互功能【缩放、鼠标手势】）
         this.offMapEvent(this.map);
@@ -1707,6 +2175,7 @@ var LeafletPolygonEditor = /** @class */ (function (_super) {
      * @memberof LeafletEditPolygon
      */
     LeafletPolygonEditor.prototype.enterEditMode = function () {
+        var _a;
         if (!this.polygonLayer)
             return;
         var latlngs = this.polygonLayer.getLatLngs();
@@ -1727,6 +2196,9 @@ var LeafletPolygonEditor = /** @class */ (function (_super) {
         this.historyStack.push(coords);
         // 清空重做栈
         this.redoStack = [];
+        // ✅ 设置吸附源（排除当前图层） 
+        var otherIndices = this.collectAllOtherGeometryIndices(this.map, this.polygonLayer);
+        (_a = this.snapController) === null || _a === void 0 ? void 0 : _a.setGeometrySources(otherIndices);
         // 渲染每个顶点为可拖动 marker
         this.reBuildMarker(coords);
         // 渲染边的中线点
@@ -1751,10 +2223,7 @@ var LeafletPolygonEditor = /** @class */ (function (_super) {
         });
         this.vertexMarkers = [];
         // 移除所有中点 marker
-        this.midpointMarkers.flat(2).forEach(function (marker) {
-            _this.map.removeLayer(marker);
-        });
-        this.midpointMarkers = [];
+        this.removeAllMidPointMarkers();
     };
     /** 插入中间点坐标
      *
@@ -1763,111 +2232,196 @@ var LeafletPolygonEditor = /** @class */ (function (_super) {
      * @return {*}  {void}
      * @memberof LeafletEditPolygon
      */
-    LeafletPolygonEditor.prototype.insertMidpointMarkers = function () {
+    LeafletPolygonEditor.prototype.insertMidpointMarkers = function (skipMarker) {
         var _this = this;
         if (!this.polygonLayer || this.currentState !== PolygonEditorState.Editing)
             return;
         // 清除旧的中点标记（若数组中存在）
-        this.midpointMarkers.flat(2).forEach(function (m) { return _this.map.removeLayer(m); });
-        this.midpointMarkers = [];
+        this.removeAllMidPointMarkers(skipMarker);
         this.vertexMarkers.forEach(function (polygon, polygonIndex) {
             var polygonMidpoints = [];
             polygon.forEach(function (ring, ringIndex) {
                 var ringMidpoints = [];
-                var _loop_1 = function (i) {
-                    var nextIndex = (i + 1) % ring.length;
-                    var p1 = ring[i].getLatLng();
-                    var p2 = ring[nextIndex].getLatLng();
-                    var midpoint = L.latLng((p1.lat + p2.lat) / 2, (p1.lng + p2.lng) / 2);
-                    var marker = L.marker(midpoint, {
-                        draggable: true,
-                        icon: _this.buildMarkerIcon("border-radius: 50%; background: #ffffff80; border: solid 1px #f00;", [14, 14])
-                    }).addTo(_this.map);
-                    // 中点被拖动时，图形同步更新
-                    marker.on('drag', function () {
-                        var latlng = marker.getLatLng();
-                        // 1. 拷贝当前顶点坐标
-                        var coords = _this.vertexMarkers.map(function (polygon) {
-                            return polygon.map(function (ring) {
-                                return ring.map(function (m) { return [m.getLatLng().lat, m.getLatLng().lng]; });
-                            });
-                        });
-                        // 2. 插入中点坐标到对应位置（不修改原 marker 数组）
-                        var ring = coords[polygonIndex][ringIndex];
-                        var newRing = __spreadArray([], ring, true);
-                        newRing.splice(nextIndex, 0, [latlng.lat, latlng.lng]);
-                        // 3. 构造新的坐标结构
-                        var newCoords = __spreadArray([], coords, true);
-                        newCoords[polygonIndex] = __spreadArray([], coords[polygonIndex], true);
-                        newCoords[polygonIndex][ringIndex] = newRing;
-                        // 4. 实时渲染
-                        _this.renderLayer(newCoords);
-                    });
-                    // 中点拖动结束后，移除此处中点，执行添加新的顶点
-                    marker.on('dragend', function () {
-                        var latlng = marker.getLatLng();
-                        // 1. 从地图中移除中点 marker
-                        _this.map.removeLayer(marker);
-                        // 2. 创建新的顶点 marker
-                        var newMarker = L.marker(latlng, {
-                            draggable: true,
-                            icon: _this.buildMarkerIcon()
-                        }).addTo(_this.map);
-                        // 3. 插入到顶点数组
-                        _this.vertexMarkers[polygonIndex][ringIndex].splice(nextIndex, 0, newMarker);
-                        // 4. 绑定事件
-                        newMarker.on('drag', function () {
-                            _this.renderLayerFromMarkers();
-                            _this.updateMidpoints();
-                        });
-                        newMarker.on('dragend', function () {
-                            _this.pushHistoryFromMarkers();
-                        });
-                        newMarker.on('contextmenu', function () {
-                            var currentRing = _this.vertexMarkers[polygonIndex][ringIndex];
-                            if (currentRing.length > 3) {
-                                // 关键：查找当前 marker 的实际索引
-                                var currentIndex = currentRing.findIndex(function (m) { return m === newMarker; });
-                                if (currentIndex !== -1) {
-                                    _this.map.removeLayer(newMarker);
-                                    currentRing.splice(currentIndex, 1);
-                                    _this.renderLayerFromMarkers();
-                                    _this.pushHistoryFromMarkers();
-                                    _this.updateMidpoints();
-                                }
-                            }
-                            else {
-                                alert('环点数不能少于3个');
-                            }
-                        });
-                        // 5. 刷新图层和中点
-                        _this.renderLayerFromMarkers();
-                        _this.pushHistoryFromMarkers();
-                        _this.updateMidpoints();
-                    });
-                    ringMidpoints.push(marker);
-                };
                 for (var i = 0; i < ring.length; i++) {
-                    _loop_1(i);
+                    var nextIndex = (i + 1) % ring.length;
+                    var p1 = ring[i];
+                    var p2 = ring[nextIndex];
+                    // ✅ 跳过当前边包含 skipMarker 的情况
+                    if (skipMarker && (skipMarker === p1 || skipMarker === p2 || skipMarker.pairRef === p1 || skipMarker.pairRef === p2)) {
+                        continue;
+                    }
+                    var insertMidpoint = _this.createInsertMidpointMarker(p1, p2, polygonIndex, ringIndex, nextIndex, 0.3);
+                    // 插入边控制点（用于拖动边） 
+                    var edgeDragMarker = _this.createEdgeDragMarker(p1, p2, polygonIndex, ringIndex, 0.6);
+                    ringMidpoints.push({ insert: insertMidpoint, edge: edgeDragMarker });
+                    // 附加：互相引用 （虽然写的晚，但是一般都会在【createInsertMidpointMarker、createEdgeDragMarker】中绑定的dragstart事件之前完成）
+                    insertMidpoint.pairRef = edgeDragMarker;
+                    edgeDragMarker.pairRef = insertMidpoint;
                 }
                 polygonMidpoints.push(ringMidpoints);
             });
             _this.midpointMarkers.push(polygonMidpoints);
         });
     };
-    /** 实时更新中线点的位置
+    /** 创建一个中点标记
+     *
+     *
+     * @private
+     * @param {L.Marker} p1 起点 marker
+     * @param {L.Marker} p2 终点 marker
+     * @param {number} polygonIndex 多边形索引
+     * @param {number} ringIndex 环索引
+     * @param {number} insertIndex 插入点的位置
+     * @param {number} positionRadio 位置比率
+     * @return {*}  {L.Marker}
+     * @memberof LeafletPolygonEditor
+     */
+    LeafletPolygonEditor.prototype.createInsertMidpointMarker = function (p1, p2, polygonIndex, ringIndex, insertIndex, positionRadio) {
+        var _this = this;
+        var midPoint = this.getFractionalPointOnEdge(p1.getLatLng(), p2.getLatLng(), positionRadio);
+        var marker = L.marker(midPoint, {
+            draggable: true,
+            icon: this.buildMarkerIcon("border-radius: 50%; background: #ffffff80; border: solid 1px #f00;", [14, 14])
+        }).addTo(this.map);
+        // 开始拖动时，移除线拖动的marker
+        marker.on('dragstart', function () {
+            var pair = marker.pairRef;
+            if (pair) {
+                _this.map.removeLayer(pair);
+            }
+        });
+        // 中点被拖动时，图形同步更新
+        marker.on('drag', function () {
+            // 0：先进行吸附处理（确定吸附点）
+            var latlng = _this.applySnapWithTarget(marker.getLatLng()).snappedLatLng;
+            // 1. 拷贝当前顶点坐标
+            var coords = _this.vertexMarkers.map(function (polygon) {
+                return polygon.map(function (ring) {
+                    return ring.map(function (m) { return [m.getLatLng().lat, m.getLatLng().lng]; });
+                });
+            });
+            // 2. 插入中点坐标到对应位置（不修改原 marker 数组）
+            var ring = coords[polygonIndex][ringIndex];
+            var newRing = __spreadArray([], ring, true);
+            newRing.splice(insertIndex, 0, [latlng.lat, latlng.lng]);
+            // 3. 构造新的坐标结构
+            var newCoords = __spreadArray([], coords, true);
+            newCoords[polygonIndex] = __spreadArray([], coords[polygonIndex], true);
+            newCoords[polygonIndex][ringIndex] = newRing;
+            // 4. 实时渲染
+            _this.renderLayer(newCoords);
+        });
+        // 中点拖动结束后，移除此处中点，执行添加新的顶点
+        marker.on('dragend', function () {
+            // 0：先进行吸附处理（只是用于确定吸附点，不再进行高亮）
+            var latlng = _this.applySnapWithTarget(marker.getLatLng(), false).snappedLatLng;
+            // 移除可能存在的高亮
+            _this.clearSnapHighlights();
+            // 1. 从地图中移除中点 marker
+            _this.map.removeLayer(marker);
+            // 2. 创建新的顶点 marker
+            var newMarker = L.marker(latlng, {
+                draggable: true,
+                icon: _this.buildMarkerIcon()
+            }).addTo(_this.map);
+            // 3. 插入到顶点数组
+            _this.vertexMarkers[polygonIndex][ringIndex].splice(insertIndex, 0, newMarker);
+            // 4. 绑定事件
+            newMarker.on('drag', function () {
+                // 先进行吸附处理（确定吸附点）
+                var latlng = _this.applySnapWithTarget(newMarker.getLatLng()).snappedLatLng;
+                marker.setLatLng(latlng);
+                _this.renderLayerFromMarkers();
+                _this.updateMidpoints();
+            });
+            newMarker.on('dragend', function () {
+                // 1. 移除可能存在的高亮
+                _this.clearSnapHighlights();
+                // 2. 更新历史记录
+                _this.pushHistoryFromMarkers();
+            });
+            newMarker.on('contextmenu', function () {
+                var currentRing = _this.vertexMarkers[polygonIndex][ringIndex];
+                if (currentRing.length > 3) {
+                    // 关键：查找当前 marker 的实际索引
+                    var currentIndex = currentRing.findIndex(function (m) { return m === newMarker; });
+                    if (currentIndex !== -1) {
+                        _this.map.removeLayer(newMarker);
+                        currentRing.splice(currentIndex, 1);
+                        _this.renderLayerFromMarkers();
+                        _this.pushHistoryFromMarkers();
+                        _this.updateMidpoints();
+                    }
+                }
+                else {
+                    alert('环点数不能少于3个');
+                }
+            });
+            // 5. 刷新图层和中点
+            _this.renderLayerFromMarkers();
+            _this.pushHistoryFromMarkers();
+            _this.updateMidpoints();
+        });
+        return marker;
+    };
+    /** 创建一个可拖动的边控制点，用于拖动整条边
+     * @param p1 起点 marker
+     * @param p2 终点 marker
+     * @param polygonIndex 多边形索引
+     * @param ringIndex 环索引
+     * @param {number} positionRadio 位置比率
+     * @returns L.Marker
+     */
+    LeafletPolygonEditor.prototype.createEdgeDragMarker = function (p1, p2, polygonIndex, ringIndex, positionRadio) {
+        var _this = this;
+        var midDragPoint = this.getFractionalPointOnEdge(p1.getLatLng(), p2.getLatLng(), positionRadio);
+        var marker = L.marker(midDragPoint, {
+            draggable: true,
+            icon: this.buildMarkerIcon("border-radius: 50%; background: #007bff80; border: solid 1px #007bff;", [12, 12])
+        }).addTo(this.map);
+        var lastLatLng = null;
+        marker.on('dragstart', function () {
+            lastLatLng = marker.getLatLng();
+            // 移除配对中点
+            var pair = marker.pairRef;
+            if (pair && _this.map.hasLayer(pair)) {
+                _this.map.removeLayer(pair);
+            }
+        });
+        marker.on('drag', function () {
+            if (!lastLatLng)
+                return;
+            var current = _this.applySnapWithTarget(marker.getLatLng()).snappedLatLng;
+            var deltaLat = current.lat - lastLatLng.lat;
+            var deltaLng = current.lng - lastLatLng.lng;
+            var latlng1 = p1.getLatLng();
+            var latlng2 = p2.getLatLng();
+            p1.setLatLng([latlng1.lat + deltaLat, latlng1.lng + deltaLng]);
+            p2.setLatLng([latlng2.lat + deltaLat, latlng2.lng + deltaLng]);
+            _this.renderLayerFromMarkers();
+            _this.updateMidpoints(marker); // ✅ 传入当前 marker，避免被销毁
+            lastLatLng = current;
+        });
+        marker.on('dragend', function () {
+            // 1. 移除可能存在的高亮
+            _this.clearSnapHighlights();
+            // 2. 重新渲染更新中点 marker
+            _this.updateMidpoints();
+            _this.pushHistoryFromMarkers();
+        });
+        return marker;
+    };
+    /** 实时更新中线点的位置（传参意思：用户正在拖动的避免销毁和重新构建）
      *
      *
      * @private
      * @memberof LeafletEditPolygon
      */
-    LeafletPolygonEditor.prototype.updateMidpoints = function () {
-        var _this = this;
+    LeafletPolygonEditor.prototype.updateMidpoints = function (skipMarker) {
         // 清除旧的中点
-        this.midpointMarkers.flat(2).forEach(function (m) { return _this.map.removeLayer(m); });
-        this.midpointMarkers = [];
+        this.removeAllMidPointMarkers(skipMarker);
         // 重新插入
-        this.insertMidpointMarkers();
+        this.insertMidpointMarkers(skipMarker);
     };
     /** 动态生成marker图标(天地图应该是构建的点图层+marker图层两个)
      *
@@ -1915,11 +2469,17 @@ var LeafletPolygonEditor = /** @class */ (function (_super) {
                     }).addTo(_this.map);
                     // 拖动时更新图形
                     marker.on('drag', function () {
+                        // 先进行吸附处理（确定吸附点）
+                        var latlng = _this.applySnapWithTarget(marker.getLatLng()).snappedLatLng;
+                        marker.setLatLng(latlng);
                         _this.renderLayerFromMarkers();
                         _this.updateMidpoints();
                     });
                     // 拖动结束后记录历史
                     marker.on('dragend', function () {
+                        // 1. 移除可能存在的高亮
+                        _this.clearSnapHighlights();
+                        // 2. 更新历史记录
                         _this.pushHistoryFromMarkers();
                     });
                     // 右键删除点（前提是环点数大于3）
@@ -1987,14 +2547,6 @@ var LeafletPolygonEditor = /** @class */ (function (_super) {
             return false;
         }
     };
-    /** 这个函数只是用于校验编辑的逻辑，不能写在事件的最顶部，因为如果是绘制事件，则不应该增加这个校验，否则会出现无法完成绘制的bug
-     *
-     *
-     * @private
-     * @param {L.LeafletMouseEvent} e
-     * @return {*}  {boolean}
-     * @memberof LeafletPolygonEditor
-     */
     LeafletPolygonEditor.prototype.canConsume = function (e) {
         // 如果是绘制操作，则直接跳过判断，后面的逻辑是给编辑操作准备的
         if (this.currentState === PolygonEditorState.Drawing)
@@ -2015,6 +2567,14 @@ var LeafletPolygonEditor = /** @class */ (function (_super) {
         }
         return false;
     };
+    /** 转换【多边形】的GeoJSON数据为Leaflet可接受的格式
+     *
+     *
+     * @private
+     * @param {GeoJSON.Geometry} geometry
+     * @return {*}  {(L.LatLngExpression[][] | L.LatLngExpression[][][])}
+     * @memberof LeafletPolygonEditor
+     */
     LeafletPolygonEditor.prototype.convertGeoJSONToLatLngs = function (geometry) {
         if (geometry.type === 'Polygon') {
             // Polygon: [ [ [lng, lat], [lng, lat], ... ], [hole1], [hole2], ... ]
@@ -2040,14 +2600,26 @@ var LeafletPolygonEditor = /** @class */ (function (_super) {
             throw new Error('不支持的 geometry 类型: ' + geometry.type);
         }
     };
+    /**
+     * 获取边上某个比例位置的点（例如 1/3、2/3）
+     * @param p1 起点
+     * @param p2 终点
+     * @param ratio 比例（0~1），例如 1/3 = 0.333
+     * @returns L.LatLng
+     */
+    LeafletPolygonEditor.prototype.getFractionalPointOnEdge = function (p1, p2, ratio) {
+        var lat = p1.lat + (p2.lat - p1.lat) * ratio;
+        var lng = p1.lng + (p2.lng - p1.lng) * ratio;
+        return L.latLng(lat, lng);
+    };
     return LeafletPolygonEditor;
 }(BasePolygonEditor));
 
 // BaseRectangleEditor.ts - 矩形基类
 var BaseRectangleEditor = /** @class */ (function (_super) {
     __extends(BaseRectangleEditor, _super);
-    function BaseRectangleEditor(map) {
-        var _this = _super.call(this, map) || this;
+    function BaseRectangleEditor(map, options) {
+        var _this = _super.call(this, map, options) || this;
         _this.vertexMarkers = []; // 存储顶点标记的数组
         _this.historyStack = []; // 历史记录，存储快照
         _this.redoStack = []; // 重做记录，存储快照
@@ -2141,7 +2713,7 @@ var LeafletRectangleEditor = /** @class */ (function (_super) {
      */
     function LeafletRectangleEditor(map, options, defaultGeometry) {
         if (options === void 0) { options = {}; }
-        var _this = _super.call(this, map) || this;
+        var _this = _super.call(this, map, { snap: options === null || options === void 0 ? void 0 : options.snap }) || this;
         _this.rectangleLayer = null;
         // 图层初始化时
         _this.drawLayerStyle = {
@@ -2277,7 +2849,6 @@ var LeafletRectangleEditor = /** @class */ (function (_super) {
                 }
             }
         };
-        console.log(_this.map);
         if (_this.map) {
             // 创建时激活
             _this.activate();
@@ -2285,7 +2856,6 @@ var LeafletRectangleEditor = /** @class */ (function (_super) {
             // 初始化时，设置绘制状态为true(双击结束绘制时关闭绘制状态，其生命周期到头，且不再改变)，且发出状态通知
             _this.updateAndNotifyStateChange(existGeometry ? PolygonEditorState.Idle : PolygonEditorState.Drawing);
             // 鼠标手势设置为十字
-            console.log('???');
             _this.map.getContainer().style.cursor = existGeometry ? 'grab' : 'crosshair';
             // 不需要设置十字光标和禁用双击放大
             existGeometry ? _this.map.doubleClickZoom.enable() : _this.map.doubleClickZoom.disable();
@@ -2300,7 +2870,7 @@ var LeafletRectangleEditor = /** @class */ (function (_super) {
         var polylineOptions = __assign(__assign({ pane: 'overlayPane', layerVisible: true, defaultStyle: this.drawLayerStyle }, this.drawLayerStyle), options);
         var coords = [[181, 181], [182, 182]]; // 默认空图形
         if (defaultGeometry) {
-            coords = this.convertGeoJSONToLatLngs(defaultGeometry);
+            coords = this.convertRectGeoJSONToLatLngs(defaultGeometry);
         }
         this.rectangleLayer = L.rectangle(coords, polylineOptions);
         this.rectangleLayer.addTo(this.map);
@@ -2400,10 +2970,10 @@ var LeafletRectangleEditor = /** @class */ (function (_super) {
         return this.rectangleLayer;
     };
     /** 控制图层显示
- *
- *
- * @memberof LeafletEditPolygon
- */
+     *
+     *
+     * @memberof LeafletEditPolygon
+     */
     LeafletRectangleEditor.prototype.show = function () {
         var _a;
         this.isVisible = true;
@@ -2453,8 +3023,8 @@ var LeafletRectangleEditor = /** @class */ (function (_super) {
      * @memberof LeafletEditPolygon
      */
     LeafletRectangleEditor.prototype.getLayerVisible = function () {
-        var _a, _b;
-        return (_b = (_a = this.rectangleLayer) === null || _a === void 0 ? void 0 : _a.options) === null || _b === void 0 ? void 0 : _b.layerVisible;
+        var _a;
+        return ((_a = this.rectangleLayer) === null || _a === void 0 ? void 0 : _a.options).layerVisible;
     };
     /** 销毁图层，从地图中移除图层
      *
@@ -2471,11 +3041,14 @@ var LeafletRectangleEditor = /** @class */ (function (_super) {
         // 编辑模式的内容也重置
         this.exitEditMode();
         // #endregion
-        // #region3：地图相关内容处理（关闭事件监听，恢复部分交互功能【缩放、鼠标手势】）
+        // #region 3：吸附用到的内容
+        this.cleanupSnapResources();
+        // #endregion
+        // #region4：地图相关内容处理（关闭事件监听，恢复部分交互功能【缩放、鼠标手势】）
         this.offMapEvent(this.map);
         this.reset();
         // #endregion
-        // #region4：清除类自身绑定的相关事件
+        // #region5：清除类自身绑定的相关事件
         this.clearAllStateListeners();
         // 设置为空闲状态，并发出状态通知
         this.updateAndNotifyStateChange(PolygonEditorState.Idle);
@@ -2524,6 +3097,7 @@ var LeafletRectangleEditor = /** @class */ (function (_super) {
      * @memberof LeafletEditRectangle
      */
     LeafletRectangleEditor.prototype.enterEditMode = function () {
+        var _a;
         if (!this.rectangleLayer)
             return;
         var bounds = this.rectangleLayer.getBounds();
@@ -2536,6 +3110,11 @@ var LeafletRectangleEditor = /** @class */ (function (_super) {
         var coords = corners.map(function (p) { return [p.lat, p.lng]; });
         // 记录初始快照
         this.historyStack.push(coords);
+        // 清空重做栈
+        this.redoStack = [];
+        // ✅ 设置吸附源（排除当前图层） 
+        var otherIndices = this.collectAllOtherGeometryIndices(this.map, this.rectangleLayer);
+        (_a = this.snapController) === null || _a === void 0 ? void 0 : _a.setGeometrySources(otherIndices);
         // 渲染每个顶点为可拖动 marker
         this.reBuildMarker(coords);
     };
@@ -2632,14 +3211,18 @@ var LeafletRectangleEditor = /** @class */ (function (_super) {
     /** 绑定 marker 事件 */
     LeafletRectangleEditor.prototype.bindMarkerEvents = function (marker, index) {
         var _this = this;
-        marker.on('drag', function (e) {
-            var newLatLng = e.latlng;
+        marker.on('drag', function () {
+            // 应用吸附
+            var newLatLng = _this.applySnapWithTarget(marker.getLatLng()).snappedLatLng;
             // 更新当前拖动的 marker
             marker.setLatLng(newLatLng);
             // 重新计算矩形的四个角
             _this.updateRectangleCorners(index, newLatLng);
         });
         marker.on('dragend', function () {
+            // 拖动结束时清除吸附高亮
+            _this.clearSnapHighlights();
+            // 更新历史记录
             var updated = _this.vertexMarkers.map(function (m) { return [m.getLatLng().lat, m.getLatLng().lng]; });
             _this.historyStack.push(__spreadArray([], updated, true));
         });
@@ -2734,7 +3317,15 @@ var LeafletRectangleEditor = /** @class */ (function (_super) {
         }
         return false;
     };
-    LeafletRectangleEditor.prototype.convertGeoJSONToLatLngs = function (geometry) {
+    /** 转换【矩形】的geojson-经纬度坐标
+     *
+     *
+     * @private
+     * @param {GeoJSON.Geometry} geometry
+     * @return {*}  {L.LatLngBoundsExpression}
+     * @memberof LeafletRectangleEditor
+     */
+    LeafletRectangleEditor.prototype.convertRectGeoJSONToLatLngs = function (geometry) {
         if (geometry.type === 'Polygon') {
             var coords = geometry.coordinates[0]; // [[lng, lat], ...]
             var lats = coords.map(function (c) { return c[1]; });

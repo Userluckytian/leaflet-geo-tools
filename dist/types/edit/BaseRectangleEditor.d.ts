@@ -1,9 +1,12 @@
+import { type SnapOptions } from "../types";
 import { BaseEditor } from "./BaseEditor";
 export declare abstract class BaseRectangleEditor extends BaseEditor {
     protected vertexMarkers: L.Marker[];
     protected historyStack: number[][][];
     protected redoStack: number[][][];
-    constructor(map: L.Map);
+    constructor(map: L.Map, options: {
+        snap?: SnapOptions;
+    });
     /** 撤回到上一步
      *
      *

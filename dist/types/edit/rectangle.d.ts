@@ -95,10 +95,10 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
      */
     getLayer(): L.Rectangle<any> | null;
     /** 控制图层显示
- *
- *
- * @memberof LeafletEditPolygon
- */
+     *
+     *
+     * @memberof LeafletEditPolygon
+     */
     private show;
     /** 控制图层隐藏
      *
@@ -199,5 +199,13 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
      */
     private isClickOnMyLayer;
     private canConsume;
-    private convertGeoJSONToLatLngs;
+    /** 转换【矩形】的geojson-经纬度坐标
+     *
+     *
+     * @private
+     * @param {GeoJSON.Geometry} geometry
+     * @return {*}  {L.LatLngBoundsExpression}
+     * @memberof LeafletRectangleEditor
+     */
+    private convertRectGeoJSONToLatLngs;
 }
