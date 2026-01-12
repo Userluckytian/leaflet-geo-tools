@@ -1,7 +1,7 @@
 import * as L from 'leaflet';
 import LeafletPolyline from '../draw/polyline';
 import { TopoReshapeFeatureResult, type TopoClipResult, type TopoMergeResult } from '../types';
-export declare class LeafletTopology {
+export default class LeafletTopology {
     private static instance;
     private map;
     drawLineLayer: LeafletPolyline | null;

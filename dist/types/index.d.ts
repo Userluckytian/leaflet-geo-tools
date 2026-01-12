@@ -7,8 +7,9 @@ import LeafletPolygonEditor from './edit/polygon';
 import LeafletRectangleEditor from './edit/rectangle';
 import LeafletArea from './measure/area';
 import LeafletDistance from './measure/distance';
+import LeafletTopology from './topo/topo';
 export * from './types';
-export { LeafletCircle, MarkerPoint, LeafletPolygon, LeafletPolyline, LeafletRectangle, LeafletArea, LeafletDistance, LeafletRectangleEditor, LeafletPolygonEditor, };
+export { LeafletCircle, MarkerPoint, LeafletPolygon, LeafletPolyline, LeafletRectangle, LeafletArea, LeafletDistance, LeafletRectangleEditor, LeafletPolygonEditor, LeafletTopology, };
 declare const LeafletGeoTools: {
     LeafletCircle: typeof LeafletCircle;
     MarkerPoint: typeof MarkerPoint;
@@ -19,5 +20,6 @@ declare const LeafletGeoTools: {
     LeafletDistance: typeof LeafletDistance;
     LeafletRectangleEditor: typeof LeafletRectangleEditor;
     LeafletPolygonEditor: typeof LeafletPolygonEditor;
+    LeafletTopology: typeof LeafletTopology;
 };
 export default LeafletGeoTools;

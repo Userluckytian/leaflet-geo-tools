@@ -39,6 +39,9 @@ export declare enum PolygonEditorState {
     Drawing = "drawing",// 正在绘制
     Editing = "editing"
 }
+export interface EditorListenerConfigs {
+    immediateNotify?: boolean;
+}
 export type drawInstance = LeafletCircle | MarkerPoint | LeafletPolygon | LeafletPolyline | LeafletRectangle;
 export type measureInstance = LeafletArea | LeafletDistance;
 export type editorInstance = LeafletEditPolygon | LeafletEditRectangle | LeafletRectangleEditor | LeafletPolygonEditor;
