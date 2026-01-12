@@ -5,7 +5,7 @@ import LeafletPolyline from '../draw/polyline';
 import { PolygonEditorState, TopoReshapeFeatureResult, type TopoClipResult, type TopoMergeResult } from '../types';
 import { clipSelectedLayersByLine, mergePolygon, reshapeSelectedLayersByLine } from '../utils/topoUtils';
 
-export class LeafletTopology {
+export default class LeafletTopology {
   private static instance: LeafletTopology;
   private map: L.Map;
   drawLineLayer: LeafletPolyline | null = null;
@@ -109,11 +109,11 @@ export class LeafletTopology {
         const { doReshapeLayers, reshapedGeoms } = reshapeSelectedLayersByLine(geoJson, this.selectedLayers, this.map);
         // 行为1：正常输出
         // console.log('clipsPolygons', clipedGeoms, 'waitingDelLayer', doClipLayers);
-        // setTimeout(() => {
-        //   this.drawLineLayer!.destroy();
-        //   this.cleanAll();
-        // }, 0);
-        // callback && callback({ clipedGeoms, doClipLayers });
+        setTimeout(() => {
+          this.drawLineLayer!.destroy();
+          this.cleanAll();
+        }, 0);
+        callback && callback({ doReshapeLayers, reshapedGeoms });
 
         // 行为2：上图渲染，但不输出，主要用于测试
         // clipsPolygons.forEach(element => {

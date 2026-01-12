@@ -5,10 +5,16 @@ import MarkerPoint from './draw/markerPoint';
 import LeafletPolygon from './draw/polygon';
 import LeafletPolyline from './draw/polyline';
 import LeafletRectangle from './draw/rectangle';
+
 import LeafletPolygonEditor from './edit/polygon';
 import LeafletRectangleEditor from './edit/rectangle';
+
 import LeafletArea from './measure/area';
 import LeafletDistance from './measure/distance';
+
+import LeafletTopology from './topo/topo';
+
+
 
 // 首先导入所有模块
 
@@ -28,6 +34,7 @@ export {
     LeafletDistance,
     LeafletRectangleEditor,
     LeafletPolygonEditor,
+    LeafletTopology,
 };
 
 // UMD需要默认导出
@@ -41,6 +48,7 @@ const LeafletGeoTools = {
     LeafletDistance,
     LeafletRectangleEditor,
     LeafletPolygonEditor,
+    LeafletTopology,
     // ... 其他类
 };
 
