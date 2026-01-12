@@ -2,6 +2,14 @@
   "name": "leaflet-geo-tools",
   "version": "0.1.2",
   "description": "Enhanced GIS tools for Leaflet",
+  "github": "https://github.com/Userluckytian/leaflet-geo-tools",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Userluckytian/leaflet-geo-tools.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Userluckytian/leaflet-geo-tools/issues"
+  },
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
   "unpkg": "dist/index.js",
