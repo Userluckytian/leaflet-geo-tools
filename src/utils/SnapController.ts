@@ -16,7 +16,7 @@
  * };
  * 4:地图编辑中可能有大量几何元素，需要优化, 只在拖动点周围查询
  * 5: 对于顶点吸附：以拖动C几何中的一个顶点p1为例，我就要把从周围获取的顶点都进行比较，来判断吸附到谁身上
- * 6：对于线吸附：采用平行边投影吸附（暂时未使用线和线的吸附，因为arcgis没有好像） 
+ * 6：对于线吸附：采用平行边投影吸附 
  *     6.1：我拖动的是一条边 E = [P₁, P₂]。
  *     6.2：吸附源是其他周围的边集合 E' = {[A₁, A₂], [B₁, B₂], ...}。
  *     6.3. 判断E与E'中每条边是否近似平行（允许小误差）,（注意这里，如果E和E'是交叉的，只要角度小于某个阈值，则仍旧认为平行），平行则继续
@@ -42,6 +42,23 @@ export class SnapController {
         this.map = map;
     }
 
+    /** 获取阈值
+     *
+     * @memberof SnapController
+     */
+    public getTolerance() {
+       return this.tolerance;
+    }
+
+    /** 获取吸附模式
+     *
+     *
+     * @memberof SnapController
+     */
+    public getModes() {
+       return this.modes;
+    }
+    
     /** 设置阈值
      *
      *

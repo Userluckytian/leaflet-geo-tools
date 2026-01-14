@@ -1,7 +1,8 @@
 import * as L from 'leaflet';
-import { PolygonEditorState, type LeafletPolylineOptionsExpends, type MidpointPair } from '../types';
+import { PolygonEditorState, type LeafletPolylineOptionsExpends, type MidpointPair, type SnapOptions } from '../types';
 import { booleanPointInPolygon, point } from '@turf/turf';
 import { BasePolygonEditor } from './BasePolygonEditor';
+import { buildMarkerIcon } from '../utils/commonUtils';
 
 export default class LeafletPolygonEditor extends BasePolygonEditor {
 
@@ -25,8 +26,13 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
      * @memberof LeafletEditPolygon
      */
     constructor(map: L.Map, options: LeafletPolylineOptionsExpends = {}, defaultGeometry?: GeoJSON.Geometry) {
-        super(map, { snap: options?.snap });
+        super(map, {
+            snap: options?.snap,
+            dragLineMarkerOptions: options?.dragLineMarkerOptions,
+            dragMidMarkerOptions: options?.dragMidMarkerOptions,
+        });
         if (this.map) {
+
             // 创建时激活
             this.activate();
             const existGeometry = !!defaultGeometry;
@@ -485,8 +491,9 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         this.redoStack = [];
 
         // ✅ 设置吸附源（排除当前图层） 
-        const otherIndices = this.collectAllOtherGeometryIndices(this.map, this.polygonLayer);
-        this.snapController?.setGeometrySources(otherIndices);
+        if (this.IsEnableSnap()) {
+            this.setSnapSources([this.polygonLayer]);
+        }
 
         // 渲染每个顶点为可拖动 marker
         this.reBuildMarker(coords)
@@ -517,50 +524,6 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
 
     }
 
-
-    /** 插入中间点坐标
-     *
-     *
-     * @private
-     * @return {*}  {void}
-     * @memberof LeafletEditPolygon
-     */
-    private insertMidpointMarkers(skipMarker?: L.Marker): void {
-        if (!this.polygonLayer || this.currentState !== PolygonEditorState.Editing) return;
-
-        // 清除旧的中点标记（若数组中存在）
-        this.removeAllMidPointMarkers(skipMarker);
-
-        this.vertexMarkers.forEach((polygon, polygonIndex) => {
-            const polygonMidpoints: MidpointPair[][] = [];
-
-            polygon.forEach((ring, ringIndex) => {
-                const ringMidpoints: MidpointPair[] = [];
-
-                for (let i = 0; i < ring.length; i++) {
-                    const nextIndex = (i + 1) % ring.length;
-                    const p1 = ring[i];
-                    const p2 = ring[nextIndex];
-                    // ✅ 跳过当前边包含 skipMarker 的情况
-                    if (skipMarker && (skipMarker === p1 || skipMarker === p2 || (skipMarker as any).pairRef === p1 || (skipMarker as any).pairRef === p2)) { continue; }
-                    const insertMidpoint = this.createInsertMidpointMarker(p1, p2, polygonIndex, ringIndex, nextIndex, 0.3)
-                    // 插入边控制点（用于拖动边） 
-                    const edgeDragMarker = this.createEdgeDragMarker(p1, p2, polygonIndex, ringIndex, 0.6);
-
-                    ringMidpoints.push({ insert: insertMidpoint, edge: edgeDragMarker });
-                    // 附加：互相引用 （虽然写的晚，但是一般都会在【createInsertMidpointMarker、createEdgeDragMarker】中绑定的dragstart事件之前完成）
-                    (insertMidpoint as any).pairRef = edgeDragMarker;
-                    (edgeDragMarker as any).pairRef = insertMidpoint;
-                }
-
-                polygonMidpoints.push(ringMidpoints);
-            });
-
-            this.midpointMarkers.push(polygonMidpoints);
-        });
-    }
-
-
     /** 创建一个中点标记
      *
      *
@@ -574,7 +537,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
      * @return {*}  {L.Marker}
      * @memberof LeafletPolygonEditor
      */
-    private createInsertMidpointMarker(
+    protected createInsertMidpointMarker(
         p1: L.Marker,
         p2: L.Marker,
         polygonIndex: number,
@@ -583,13 +546,8 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         positionRadio: number
     ): L.Marker {
         const midPoint = this.getFractionalPointOnEdge(p1.getLatLng(), p2.getLatLng(), positionRadio);
-        const marker = L.marker(midPoint, {
-            draggable: true,
-            icon: this.buildMarkerIcon(
-                "border-radius: 50%; background: #ffffff80; border: solid 1px #f00;",
-                [14, 14]
-            )
-        }).addTo(this.map);
+
+        const marker = L.marker(midPoint, this.midpointOptions.midPointDefaultMarkerOptions).addTo(this.map);
 
         // 开始拖动时，移除线拖动的marker
         marker.on('dragstart', () => {
@@ -602,7 +560,11 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         // 中点被拖动时，图形同步更新
         marker.on('drag', () => {
             // 0：先进行吸附处理（确定吸附点）
-            const { snappedLatLng: latlng } = this.applySnapWithTarget(marker.getLatLng());
+            let latlng = marker.getLatLng();
+            if (this.IsEnableSnap()) {
+                const { snappedLatLng } = this.applySnapWithTarget(marker.getLatLng());
+                latlng = snappedLatLng;
+            }
 
             // 1. 拷贝当前顶点坐标
             const coords = this.vertexMarkers.map(polygon =>
@@ -627,7 +589,11 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         // 中点拖动结束后，移除此处中点，执行添加新的顶点
         marker.on('dragend', () => {
             // 0：先进行吸附处理（只是用于确定吸附点，不再进行高亮）
-            const { snappedLatLng: latlng } = this.applySnapWithTarget(marker.getLatLng(), false);
+            let latlng = marker.getLatLng();
+            if (this.IsEnableSnap()) {
+                const { snappedLatLng } = this.applySnapWithTarget(marker.getLatLng());
+                latlng = snappedLatLng;
+            }
             // 移除可能存在的高亮
             this.clearSnapHighlights();
 
@@ -637,7 +603,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
             // 2. 创建新的顶点 marker
             const newMarker = L.marker(latlng, {
                 draggable: true,
-                icon: this.buildMarkerIcon()
+                icon: buildMarkerIcon()
             }).addTo(this.map);
 
             // 3. 插入到顶点数组
@@ -646,7 +612,11 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
             // 4. 绑定事件
             newMarker.on('drag', () => {
                 // 先进行吸附处理（确定吸附点）
-                const { snappedLatLng: latlng } = this.applySnapWithTarget(newMarker.getLatLng());
+                let latlng = newMarker.getLatLng();
+                if (this.IsEnableSnap()) {
+                    const { snappedLatLng } = this.applySnapWithTarget(marker.getLatLng());
+                    latlng = snappedLatLng;
+                }
                 marker.setLatLng(latlng);
 
                 this.renderLayerFromMarkers();
@@ -693,7 +663,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
      * @param {number} positionRadio 位置比率
      * @returns L.Marker
      */
-    private createEdgeDragMarker(
+    protected createEdgeDragMarker(
         p1: L.Marker,
         p2: L.Marker,
         polygonIndex: number,
@@ -701,13 +671,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         positionRadio: number
     ): L.Marker {
         const midDragPoint = this.getFractionalPointOnEdge(p1.getLatLng(), p2.getLatLng(), positionRadio);
-        const marker = L.marker(midDragPoint, {
-            draggable: true,
-            icon: this.buildMarkerIcon(
-                "border-radius: 50%; background: #007bff80; border: solid 1px #007bff;",
-                [12, 12]
-            )
-        }).addTo(this.map);
+        const marker = L.marker(midDragPoint, this.midpointOptions.edgeDefaultMarkerOptions).addTo(this.map);
         let lastLatLng: L.LatLng | null = null;
 
         marker.on('dragstart', () => {
@@ -751,44 +715,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
     }
 
 
-
-
-
-    /** 实时更新中线点的位置（传参意思：用户正在拖动的避免销毁和重新构建）
-     *
-     *
-     * @private
-     * @memberof LeafletEditPolygon
-     */
-    private updateMidpoints(skipMarker?: L.Marker): void {
-        // 清除旧的中点
-        this.removeAllMidPointMarkers(skipMarker);
-
-        // 重新插入
-        this.insertMidpointMarkers(skipMarker);
-    }
-
-    /** 动态生成marker图标(天地图应该是构建的点图层+marker图层两个)
-     *
-     *
-     * @private
-     * @param {string} [iconStyle="border-radius: 50%;background: #ffffff;border: solid 3px red;"]
-     * @param {L.PointExpression} [iconSize=[20, 20]]
-     * @param {L.DivIconOptions} [options]
-     * @return {*}  {L.DivIcon}
-     * @memberof LeafletEditPolygon
-     */
-    private buildMarkerIcon(iconStyle = "border-radius: 50%;background: #ffffff;border: solid 3px red;", iconSize: number[] = [20, 20], options?: L.DivIconOptions): L.DivIcon {
-        let defaultIconStyle = `width:${iconSize[0]}px; height: ${iconSize[1]}px;`
-        return L.divIcon({
-            className: 'edit-polygon-marker',
-            html: `<div style="${iconStyle + defaultIconStyle}"></div>`,
-            iconSize: iconSize as L.PointExpression,
-            ...options
-        });
-    }
-
-    /** 根据坐标重建 marker 和图形 + 重新渲染图层
+    /** 根据坐标重建 marker 和图形 + 重新渲染图层(未使用)
      * 
      * @param latlngs 坐标数组
      */
@@ -821,13 +748,17 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
 
                     const marker = L.marker(latlng, {
                         draggable: true,
-                        icon: this.buildMarkerIcon()
+                        icon: buildMarkerIcon()
                     }).addTo(this.map);
 
                     // 拖动时更新图形
                     marker.on('drag', () => {
                         // 先进行吸附处理（确定吸附点）
-                        const { snappedLatLng: latlng } = this.applySnapWithTarget(marker.getLatLng());
+                        let latlng = marker.getLatLng();
+                        if (this.IsEnableSnap()) {
+                            const { snappedLatLng } = this.applySnapWithTarget(marker.getLatLng());
+                            latlng = snappedLatLng;
+                        }
                         marker.setLatLng(latlng);
 
                         this.renderLayerFromMarkers();
@@ -888,6 +819,22 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         this.historyStack.push(coords);
     }
 
+    // #endregion
+
+    // #region 吸附函数
+
+    /**
+     * 快捷方法：动态切换吸附功能
+     */
+    public toggleSnap(options: SnapOptions): void {
+        this.updateSnapOptions(options);
+        // 如果正在编辑，需要更新吸附源
+        if (this.currentState === PolygonEditorState.Editing) {
+            if (this.IsEnableSnap()) {
+                this.setSnapSources([this.polygonLayer!]);
+            }
+        }
+    }
 
     // #endregion
 
@@ -932,6 +879,21 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
         }
         return false;
     }
+
+    /** 是否开启了吸附操作
+     *
+     *
+     * @private
+     * @return {*}  {boolean}
+     * @memberof LeafletPolygonEditor
+     */
+    private IsEnableSnap(): boolean {
+        const snapOptions = this.getSnapOptions();
+        if (snapOptions && snapOptions.enabled && this.snapController) {
+            return true;
+        }
+        return false;
+    }
     /** 转换【多边形】的GeoJSON数据为Leaflet可接受的格式
      *
      *
@@ -959,20 +921,6 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
             throw new Error('不支持的 geometry 类型: ' + geometry.type);
         }
     }
-
-    /**
-     * 获取边上某个比例位置的点（例如 1/3、2/3）
-     * @param p1 起点
-     * @param p2 终点
-     * @param ratio 比例（0~1），例如 1/3 = 0.333
-     * @returns L.LatLng
-     */
-    private getFractionalPointOnEdge(p1: L.LatLng, p2: L.LatLng, ratio: number): L.LatLng {
-        const lat = p1.lat + (p2.lat - p1.lat) * ratio;
-        const lng = p1.lng + (p2.lng - p1.lng) * ratio;
-        return L.latLng(lat, lng);
-    }
-
 
 
     // #endregion
