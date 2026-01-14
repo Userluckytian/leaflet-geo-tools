@@ -1,13 +1,73 @@
-import { type MidpointPair, type SnapOptions } from "../types";
+import * as L from "leaflet";
+import { type DragMarkerOptions, type MidPointInitOptions, type MidpointPair, type SnapOptions } from "../types";
 import { BaseEditor } from "./BaseEditor";
 export declare abstract class BasePolygonEditor extends BaseEditor {
     protected vertexMarkers: L.Marker[][][];
     protected midpointMarkers: MidpointPair[][][];
     protected historyStack: number[][][][][];
     protected redoStack: number[][][][][];
+    protected midpointOptions: MidPointInitOptions;
     constructor(map: L.Map, options: {
         snap?: SnapOptions;
+        dragLineMarkerOptions?: DragMarkerOptions;
+        dragMidMarkerOptions?: DragMarkerOptions;
     });
+    /** 初始化中点坐标配置信息
+     *
+     *
+     * @private
+     * @param {DragMarkerOptions} [dragMidMarkerOptions] // 中点拖拽标记配置信息
+     * @param {DragMarkerOptions} [dragLineMarkerOptions] // 边线拖拽标记配置信息
+     * @memberof BasePolygonEditor
+     */
+    private initMidpointOptions;
+    /** 插入中间点坐标
+     *
+     *
+     * @private
+     * @return {*}  {void}
+     * @memberof LeafletEditPolygon
+     */
+    protected insertMidpointMarkers(skipMarker?: L.Marker): void;
+    /** 实时更新中线点的位置（传参意思：用户正在拖动的避免销毁和重新构建）
+     *
+     *
+     * @private
+     * @memberof LeafletEditPolygon
+     */
+    protected updateMidpoints(skipMarker?: L.Marker): void;
+    /** 更新【中点插入marker】坐标渲染属性信息
+     *
+     *
+     * @protected
+     * @param {MidPointInitOptions} options
+     * @memberof BasePolygonEditor
+     */
+    updateDragMidMarkerOptions(options: DragMarkerOptions): void;
+    /** 更新【中点线marker】坐标渲染属性信息
+     *
+     *
+     * @protected
+     * @param {MidPointInitOptions} options
+     * @memberof BasePolygonEditor
+     */
+    updateDragLineMarkerOptions(options: DragMarkerOptions): void;
+    protected abstract createInsertMidpointMarker(p1: L.Marker, p2: L.Marker, polygonIndex: number, ringIndex: number, insertIndex: number, positionRadio: number): L.Marker | null;
+    protected abstract createEdgeDragMarker(p1: L.Marker, p2: L.Marker, polygonIndex: number, ringIndex: number, positionRadio: number): L.Marker | null;
+    /**
+     * 获取边上某个比例位置的点（例如 1/3、2/3）
+     * @param p1 起点
+     * @param p2 终点
+     * @param ratio 比例（0~1），例如 1/3 = 0.333
+     * @returns L.LatLng
+     */
+    protected getFractionalPointOnEdge(p1: L.LatLng, p2: L.LatLng, ratio: number): L.LatLng;
+    /** 移除所有中点标记（若存在正在拖动的，则跳过）
+     *
+     *
+     * @memberof BasePolygonEditor
+     */
+    protected removeAllMidPointMarkers(skipMarker?: L.Marker): void;
     /** 撤回到上一步
      *
      *
@@ -42,12 +102,6 @@ export declare abstract class BasePolygonEditor extends BaseEditor {
      * @memberof LeafletEditRectangle
      */
     reset(): void;
-    /** 移除所有中点标记（若存在正在拖动的，则跳过）
-     *
-     *
-     * @memberof BasePolygonEditor
-     */
-    removeAllMidPointMarkers(skipMarker?: L.Marker): void;
     /** 根据坐标重建 marker 和图形 + 重新渲染图层
      *
      *

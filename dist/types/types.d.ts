@@ -14,6 +14,16 @@ export type SnapOptions = {
     enabled: boolean;
     modes: SnapMode[];
     tolerance?: number;
+    highlight?: SnapHighlightLayerOptions;
+};
+export interface SnapHighlightLayerOptions {
+    enabled?: boolean;
+    pointStyle?: L.CircleMarkerOptions;
+    edgeStyle?: L.PolylineOptions;
+}
+export type DragMarkerOptions = {
+    enabled: boolean;
+    dragMarkerStyle?: L.MarkerOptions;
 };
 export interface SnapResult {
     snappedLatLng: L.LatLng;
@@ -47,13 +57,24 @@ export type measureInstance = LeafletArea | LeafletDistance;
 export type editorInstance = LeafletEditPolygon | LeafletEditRectangle | LeafletRectangleEditor | LeafletPolygonEditor;
 export type leafletGeoEditorInstance = drawInstance | measureInstance | editorInstance;
 export type MidpointPair = {
-    insert: L.Marker;
-    edge: L.Marker;
+    insert: L.Marker | null;
+    edge: L.Marker | null;
 };
+export interface MidPointInitOptions {
+    midPointEnable?: boolean;
+    midPointDefaultMarkerOptions?: L.MarkerOptions;
+    midPointPositionRatio?: number;
+    edgeEnable?: boolean;
+    edgeDefaultMarkerOptions?: L.MarkerOptions;
+    edgePositionRatio?: number;
+    showOnHover?: boolean;
+}
 export interface LeafletPolylineOptionsExpends extends L.PolylineOptions {
     origin?: any;
     defaultStyle?: any;
     snap?: SnapOptions;
+    dragLineMarkerOptions?: DragMarkerOptions;
+    dragMidMarkerOptions?: DragMarkerOptions;
     [key: string]: unknown;
 }
 export interface TopoMergeResult {

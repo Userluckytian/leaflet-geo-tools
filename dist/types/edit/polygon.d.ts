@@ -1,5 +1,5 @@
 import * as L from 'leaflet';
-import { type LeafletPolylineOptionsExpends } from '../types';
+import { type LeafletPolylineOptionsExpends, type SnapOptions } from '../types';
 import { BasePolygonEditor } from './BasePolygonEditor';
 export default class LeafletPolygonEditor extends BasePolygonEditor {
     private polygonLayer;
@@ -162,14 +162,6 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
      * @memberof LeafletEditPolygon
      */
     exitEditMode(): void;
-    /** 插入中间点坐标
-     *
-     *
-     * @private
-     * @return {*}  {void}
-     * @memberof LeafletEditPolygon
-     */
-    private insertMidpointMarkers;
     /** 创建一个中点标记
      *
      *
@@ -183,7 +175,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
      * @return {*}  {L.Marker}
      * @memberof LeafletPolygonEditor
      */
-    private createInsertMidpointMarker;
+    protected createInsertMidpointMarker(p1: L.Marker, p2: L.Marker, polygonIndex: number, ringIndex: number, insertIndex: number, positionRadio: number): L.Marker;
     /** 创建一个可拖动的边控制点，用于拖动整条边
      * @param p1 起点 marker
      * @param p2 终点 marker
@@ -192,26 +184,8 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
      * @param {number} positionRadio 位置比率
      * @returns L.Marker
      */
-    private createEdgeDragMarker;
-    /** 实时更新中线点的位置（传参意思：用户正在拖动的避免销毁和重新构建）
-     *
-     *
-     * @private
-     * @memberof LeafletEditPolygon
-     */
-    private updateMidpoints;
-    /** 动态生成marker图标(天地图应该是构建的点图层+marker图层两个)
-     *
-     *
-     * @private
-     * @param {string} [iconStyle="border-radius: 50%;background: #ffffff;border: solid 3px red;"]
-     * @param {L.PointExpression} [iconSize=[20, 20]]
-     * @param {L.DivIconOptions} [options]
-     * @return {*}  {L.DivIcon}
-     * @memberof LeafletEditPolygon
-     */
-    private buildMarkerIcon;
-    /** 根据坐标重建 marker 和图形 + 重新渲染图层
+    protected createEdgeDragMarker(p1: L.Marker, p2: L.Marker, polygonIndex: number, ringIndex: number, positionRadio: number): L.Marker;
+    /** 根据坐标重建 marker 和图形 + 重新渲染图层(未使用)
      *
      * @param latlngs 坐标数组
      */
@@ -223,6 +197,10 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
     private reBuildMarker;
     private renderLayerFromMarkers;
     private pushHistoryFromMarkers;
+    /**
+     * 快捷方法：动态切换吸附功能
+     */
+    toggleSnap(options: SnapOptions): void;
     /**  判断点击事件是否自己身上
      *
      *
@@ -234,6 +212,14 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
      */
     private isClickOnMyLayer;
     private canConsume;
+    /** 是否开启了吸附操作
+     *
+     *
+     * @private
+     * @return {*}  {boolean}
+     * @memberof LeafletPolygonEditor
+     */
+    private IsEnableSnap;
     /** 转换【多边形】的GeoJSON数据为Leaflet可接受的格式
      *
      *
@@ -243,12 +229,4 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
      * @memberof LeafletPolygonEditor
      */
     private convertGeoJSONToLatLngs;
-    /**
-     * 获取边上某个比例位置的点（例如 1/3、2/3）
-     * @param p1 起点
-     * @param p2 终点
-     * @param ratio 比例（0~1），例如 1/3 = 0.333
-     * @returns L.LatLng
-     */
-    private getFractionalPointOnEdge;
 }

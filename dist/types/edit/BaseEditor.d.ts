@@ -1,5 +1,5 @@
 import * as L from "leaflet";
-import { EditorListenerConfigs, PolygonEditorState, type GeometryIndex, type SnapOptions, type SnapResult } from "../types";
+import { PolygonEditorState, type EditorListenerConfigs, type GeometryIndex, type SnapHighlightLayerOptions, type SnapOptions, type SnapResult } from "../types";
 import { SnapController } from "../utils/SnapController";
 export declare abstract class BaseEditor {
     private static currentActiveEditor;
@@ -13,6 +13,7 @@ export declare abstract class BaseEditor {
     private snapHighlightLayer;
     private highlightCircleMarker;
     private highlightEdgeLayer;
+    protected snapHighlightOptions: SnapHighlightLayerOptions;
     constructor(map: L.Map, options: {
         snap?: SnapOptions;
     });
@@ -72,6 +73,13 @@ export declare abstract class BaseEditor {
      *
      */
     protected clearAllStateListeners(): void;
+    /**
+      * arcgis，
+      * 1：拖动面时，不进行吸附行为，
+      * 2：拖动点接近另一个点时，点被吸附到一起，
+      * 3：拖动一个点接近一条线时，点会被吸附到线上
+      * 4：拖动一条线接近另一条线时，会根据鼠标按下拖动的那个坐标去吸附目标线，而拖动的线会跟着跑，同步的图形也在变化
+     */
     /** 初始化吸附控制器
      *
      *
@@ -81,6 +89,20 @@ export declare abstract class BaseEditor {
      * @memberof BaseEditor
      */
     private initSnap;
+    /**
+     * 动态启用/禁用吸附功能
+     * @param options 吸附选项
+     */
+    updateSnapOptions(options: SnapOptions): void;
+    /**
+     * 获取当前吸附配置
+     */
+    getSnapOptions(): SnapOptions | null;
+    /**
+     * 设置吸附源（其他几何图形）
+     * @param layers 要排除的图层列表
+     */
+    protected setSnapSources(excludeLayers: L.Layer[]): void;
     /** 【吸附器】确定最终的坐标(顶点会去吸附边和其他顶点)
      *
      *
@@ -89,7 +111,7 @@ export declare abstract class BaseEditor {
      * @return {*}  {L.LatLng}
      * @memberof BaseEditor
      */
-    protected applySnapWithTarget(latlng: L.LatLng, autoHighlight?: boolean): SnapResult;
+    protected applySnapWithTarget(latlng: L.LatLng): SnapResult;
     /** 【顶点吸附器】收集所有其他图层的顶点信息
      *
      *
