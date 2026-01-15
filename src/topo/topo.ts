@@ -76,7 +76,7 @@ export default class LeafletTopology {
       const mergedGeom = mergePolygon(this.selectedLayers);
       // console.log('合并--mergedGeom', mergedGeom);
       // return { mergedGeom, mergedLayers: this.selectedLayers };
-       // console.log('合并--mergedGeom', mergedGeom);
+      // console.log('合并--mergedGeom', mergedGeom);
       callback && callback({ mergedGeom, mergedLayers: this.selectedLayers })
       setTimeout(() => {
         this.cleanAll();
@@ -86,11 +86,11 @@ export default class LeafletTopology {
     }
   }
 
-    /** 
-   * 执行整形要素工具操作 
-   * */
+  /** 
+ * 执行整形要素工具操作 
+ * */
   public reshapeFeature(callback: (result: TopoReshapeFeatureResult) => void) {
-       if (this.selectedLayers.length === 0) {
+    if (this.selectedLayers.length === 0) {
       throw new Error('请先选择要执行整形操作的图层');
     }
 
@@ -250,5 +250,15 @@ export default class LeafletTopology {
     }
     this.selectedLayers = [];
     this.enableMapOpt();
+  }
+
+
+  /** 返回选择的全部图层
+   *
+   *
+   * @memberof LeafletTopology
+   */
+  public getSelectLayers() {
+    return this.selectedLayers;
   }
 }
