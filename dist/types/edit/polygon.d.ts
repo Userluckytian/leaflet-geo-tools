@@ -5,6 +5,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
     private polygonLayer;
     private drawLayerStyle;
     private tempCoords;
+    private lastMoveCoord;
     /** 创建一个多边形编辑类
      *
      * @param {L.Map} map 地图对象
@@ -29,6 +30,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
      * @memberof LeafletEditPolygon
      */
     private initMapEvent;
+    undoDraw(): boolean;
     /**  地图点击事件，用于设置点的位置
      *
      *

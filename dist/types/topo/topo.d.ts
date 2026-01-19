@@ -46,4 +46,10 @@ export default class LeafletTopology {
      * 4： 重置模式管理器
      * */
     cleanAll(): void;
+    /** 返回选择的全部图层
+     *
+     *
+     * @memberof LeafletTopology
+     */
+    getSelectLayers(): L.GeoJSON<any, import("geojson").Geometry>[];
 }

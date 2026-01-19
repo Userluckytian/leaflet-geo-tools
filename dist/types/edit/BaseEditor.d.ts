@@ -47,13 +47,20 @@ export declare abstract class BaseEditor {
      * @memberof BaseEditor
      */
     protected updateAndNotifyStateChange(status: PolygonEditorState, immediateNotify?: boolean): void;
-    /** 设置当前的状态，
+    /** 设置编辑器当前的状态，
      *
      *
      * @param {PolygonEditorState} status
      * @memberof BaseEditor
      */
     setCurrentState(status: PolygonEditorState): void;
+    /** 返回编辑器当前的状态，
+     *
+     *
+     * @param {PolygonEditorState} status
+     * @memberof BaseEditor
+     */
+    getCurrentState(): PolygonEditorState;
     /** 外部监听者添加的回调监听函数，存储到这边，状态改变时，触发这些监听事件的回调
      *
      *
