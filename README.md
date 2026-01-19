@@ -289,8 +289,13 @@ npm run test:coverage
 - 🎯 整形要素工具（Reshape Feature）
 - 🎯 ...
 ### v0.1.2 (2026-01-09)
-- ✅ topo基本操作（线裁剪、合并面）
 - ✅ 整形要素工具（Reshape Feature）
 - ✅ 拖动边、顶点吸附功能
 - 🎯 魔棒选择工具（Magic Wand）
 - 🎯 ...
+### v0.1.4 (2026-01-15)
+- ✅ 提供topo工具选中的图层的函数`getSelectLayers`
+- 🎯 魔棒选择工具（Magic Wand）
+- 🎯 ...
+
+more info: [github releases](https://github.com/Userluckytian/leaflet-geo-tools/releases)
