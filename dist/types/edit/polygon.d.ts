@@ -142,6 +142,16 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
      * @returns {Array} 去重后的坐标数组
      */
     private deduplicateCoordinates;
+    /**
+     * 检查是否可以进入编辑模式
+     * @private
+     */
+    private canEnterEditMode;
+    /**
+     * 进入编辑模式
+     * @public
+     */
+    startEdit(): void;
     /** 进入编辑模式
      * 1: 更新编辑状态变量
      * 2: 构建marker点

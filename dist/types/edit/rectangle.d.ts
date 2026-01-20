@@ -1,10 +1,11 @@
 import * as L from 'leaflet';
-import { type LeafletPolylineOptionsExpends } from '../types';
+import { type LeafletPolylineOptionsExpends, type SnapOptions } from '../types';
 import { BaseRectangleEditor } from './BaseRectangleEditor';
 export default class LeafletRectangleEditor extends BaseRectangleEditor {
     private rectangleLayer;
     private drawLayerStyle;
     private tempCoords;
+    private lastMoveCoord;
     /** 创建一个矩形编辑类
      *
      * @param {L.Map} map 地图对象
@@ -141,6 +142,7 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
      * @memberof LeafletEditRectangle
      */
     private offMapEvent;
+    undoDraw(): boolean;
     /** 进入编辑模式
      * 1: 更新编辑状态变量
      * 2: 构建marker点
@@ -163,6 +165,16 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
      * @memberof LeafletEditRectangle
      */
     exitEditMode(): void;
+    /**
+     * 检查是否可以进入编辑模式
+     * @private
+     */
+    private canEnterEditMode;
+    /**
+     * 进入编辑模式
+     * @public
+     */
+    startEdit(): void;
     /** 动态生成marker图标(天地图应该是构建的点图层+marker图层两个)
      *
      *
@@ -199,6 +211,14 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
      */
     private isClickOnMyLayer;
     private canConsume;
+    /** 是否开启了吸附操作
+     *
+     *
+     * @private
+     * @return {*}  {boolean}
+     * @memberof LeafletPolygonEditor
+     */
+    private IsEnableSnap;
     /** 转换【矩形】的geojson-经纬度坐标
      *
      *
@@ -208,4 +228,8 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
      * @memberof LeafletRectangleEditor
      */
     private convertRectGeoJSONToLatLngs;
+    /**
+     * 快捷方法：动态切换吸附功能
+     */
+    toggleSnap(options: SnapOptions): void;
 }

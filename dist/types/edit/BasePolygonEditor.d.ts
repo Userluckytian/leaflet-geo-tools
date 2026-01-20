@@ -1,18 +1,17 @@
 import * as L from "leaflet";
-import { type DragMarkerOptions, type MidPointInitOptions, type MidpointPair, type SnapOptions } from "../types";
+import { type EditOptions, type MidpointPair, type SnapOptions } from "../types";
 import { BaseEditor } from "./BaseEditor";
 export declare abstract class BasePolygonEditor extends BaseEditor {
     protected vertexMarkers: L.Marker[][][];
     protected midpointMarkers: MidpointPair[][][];
     protected historyStack: number[][][][][];
     protected redoStack: number[][][][][];
-    protected midpointOptions: MidPointInitOptions;
+    protected editOptions: EditOptions;
     constructor(map: L.Map, options: {
         snap?: SnapOptions;
-        dragLineMarkerOptions?: DragMarkerOptions;
-        dragMidMarkerOptions?: DragMarkerOptions;
+        edit?: EditOptions;
     });
-    /** 初始化中点坐标配置信息
+    /** 初始化编辑点marker的配置信息
      *
      *
      * @private
@@ -20,7 +19,7 @@ export declare abstract class BasePolygonEditor extends BaseEditor {
      * @param {DragMarkerOptions} [dragLineMarkerOptions] // 边线拖拽标记配置信息
      * @memberof BasePolygonEditor
      */
-    private initMidpointOptions;
+    private initEditOptions;
     /** 插入中间点坐标
      *
      *
@@ -36,20 +35,30 @@ export declare abstract class BasePolygonEditor extends BaseEditor {
      * @memberof LeafletEditPolygon
      */
     protected updateMidpoints(skipMarker?: L.Marker): void;
-    /** 更新【中点插入marker】坐标渲染属性信息
-     *
-     *
-     * @param {MidPointInitOptions} options
-     * @memberof BasePolygonEditor
+    /**
+     * 获取当前标记的坐标（辅助方法）
+     * @private
      */
-    updateDragMidMarkerOptions(options: DragMarkerOptions): void;
-    /** 更新【中点线marker】坐标渲染属性信息
-     *
-     *
-     * @param {MidPointInitOptions} options
-     * @memberof BasePolygonEditor
+    private getCurrentMarkerCoords;
+    /**
+     * 更新编辑配置
+     * @param options 编辑配置
      */
-    updateDragLineMarkerOptions(options: DragMarkerOptions): void;
+    updateEditOptions(options: EditOptions): void;
+    /**
+     * 获取是否启用编辑
+     */
+    getEditEnabled(): boolean;
+    /**
+     * 设置是否启用编辑
+     * @param enabled 是否启用
+     */
+    setEditEnabled(enabled: boolean): void;
+    /**
+     * 深度合并编辑配置
+     * @private
+     */
+    private mergeEditOptions;
     protected abstract createInsertMidpointMarker(p1: L.Marker, p2: L.Marker, polygonIndex: number, ringIndex: number, insertIndex: number, positionRadio: number): L.Marker | null;
     protected abstract createEdgeDragMarker(p1: L.Marker, p2: L.Marker, polygonIndex: number, ringIndex: number, positionRadio: number): L.Marker | null;
     /**
