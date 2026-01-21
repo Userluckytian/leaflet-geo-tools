@@ -11,8 +11,8 @@ import LeafletRectangleEditor from './edit/rectangle';
 
 import LeafletArea from './measure/area';
 import LeafletDistance from './measure/distance';
+import { LeafletTopology } from './topo/topo';
 
-import LeafletTopology from './topo/topo';
 
 
 
