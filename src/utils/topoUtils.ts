@@ -1,7 +1,7 @@
-import { featureCollection, flattenEach, union } from "@turf/turf";
+import { featureCollection, flattenEach, union, polygon } from "@turf/turf";
 import splitPolygon from "../topo/turf-polygon-split";
-import type { TopoClipResult, TopoReshapeFeatureResult } from "../types";
-import { reshapeMultiPolygonByLine, reshapePolygonByLine } from "../topo/turf-reshape-feature";
+import type { ReshapeOptions, TopoClipResult, TopoReshapeFeatureResult } from "../types";
+import { reshapeLineByLine, reshapeMultiPolygonByLine, reshapePolygonByLine } from "../topo/turf-reshape-feature";
 
 /** 保存裁剪后的图层
  *
@@ -93,25 +93,43 @@ export function mergePolygon(selLayers: any): GeoJSON.Feature | null {
 export function reshapeSelectedLayersByLine(
     sketchLine: GeoJSON.Feature<any>,
     selLayers: L.GeoJSON[],
-    map: L.Map
+    options: ReshapeOptions = { chooseStrategy: 'auto', AllowReshapingWithoutSelection: false }
 ): TopoReshapeFeatureResult {
     const waitingDelLayer: L.Layer[] = [];
-    const results: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>[] = [];
+    const results: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon | GeoJSON.LineString>[] = [];
     selLayers.forEach((layer: L.GeoJSON) => {
 
-        const geojsonFeatureCollection = layer.toGeoJSON() as GeoJSON.FeatureCollection<any>;
-        const geojson = geojsonFeatureCollection.features[0];
+        const geojsonFeatureInfo = layer.toGeoJSON() as GeoJSON.FeatureCollection<any> | GeoJSON.Feature<any>;
+        /*  排查了一下：
+            若是先选择再进行重塑时，选择的图层高亮黄色，其geojsonFeatureInfo.type为'FeatureCollection'
+            若是无选择重塑，geojsonFeatureInfo.type为'Feature'
+            另外，我每次都是处理一个面，所以FeatureCollection的Feature的数量一定是1个。
+         */
+        let geojson = null;
+        if (geojsonFeatureInfo.type === 'FeatureCollection') {
+            geojson = geojsonFeatureInfo.features[0];
+        } else {
+            geojson = geojsonFeatureInfo;
+        }
+
         const type = geojson.geometry.type;
         switch (type) {
+            case 'LineString':
+                const lineResult = reshapeLineByLine(geojson as GeoJSON.Feature<GeoJSON.LineString>, sketchLine, options);
+                // console.log('lineResult', lineResult);
+
+                if (lineResult)
+                    results.push(...lineResult);
+                break;
             case 'Polygon':
-                const polyResult = reshapePolygonByLine(geojson as GeoJSON.Feature<GeoJSON.Polygon>, sketchLine, map);
-                console.log('polyResult', polyResult);
+                const polyResult = reshapePolygonByLine(geojson as GeoJSON.Feature<GeoJSON.Polygon>, sketchLine, options);
+                // console.log('polyResult', polyResult);
 
                 if (polyResult)
                     results.push(...polyResult);
                 break;
             case 'MultiPolygon':
-                const MultiPolyResult = reshapeMultiPolygonByLine(geojson as GeoJSON.Feature<GeoJSON.MultiPolygon>, sketchLine, map);
+                const MultiPolyResult = reshapeMultiPolygonByLine(geojson as GeoJSON.Feature<GeoJSON.MultiPolygon>, sketchLine, options);
                 if (MultiPolyResult)
                     results.push(...MultiPolyResult);
                 break;
@@ -121,14 +139,12 @@ export function reshapeSelectedLayersByLine(
         }
 
     });
-    console.log('results', results);
-    
+    // console.log('results', results);
+
     return { doReshapeLayers: waitingDelLayer, reshapedGeoms: results };
 }
 
-
-/**
- * 归一化 GeoJSON 数据中的所有坐标，保留指定小数位
+/** （topo行为合并时，将距离过近，但不挨着的点视为误差，直接认定为同一个点）归一化 GeoJSON 数据中的所有坐标，保留指定小数位
  * 支持 FeatureCollection、Feature、Geometry 对象
  */
 function normalizeGeoJSONCoordinates(geojson: any, precision = 6): any {
