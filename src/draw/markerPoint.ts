@@ -108,6 +108,7 @@ export default class MarkerPoint {
             this.markerLayer = null;
         }
         this.reset();
+        this.clearAllStateListeners();
     }
 
     // #endregion
@@ -140,7 +141,7 @@ export default class MarkerPoint {
     /** 清空所有状态监听器 
      * 
      */
-    public clearAllStateListeners(): void {
+    private clearAllStateListeners(): void {
         this.stateListeners = [];
     }
 

@@ -168,6 +168,7 @@ export default class LeafletCircle {
             this.circleLayer = null;
         }
         this.reset();
+        this.clearAllStateListeners();
     }
 
     /** 关闭地图事件监听
@@ -212,7 +213,7 @@ export default class LeafletCircle {
     /** 清空所有状态监听器 
      * 
      */
-    public clearAllStateListeners(): void {
+    private clearAllStateListeners(): void {
         this.stateListeners = [];
     }
 
