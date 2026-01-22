@@ -61,11 +61,11 @@ console.log(PolygonEditorState.Editing);   // 'editing' - 正在编辑（编辑�
 ```
 
 **状态说明：**
-| 状态值 | 描述 | 适用场景 |
-|--------|------|----------|
-| `Idle` | 空闲状态 | 未处于绘制或编辑中 |
-| `Drawing` | 绘制状态 | 正在绘制几何图形 |
-| `Editing` | 编辑状态 | 正在编辑已有图形 |
+| 状态值    | 描述     | 适用场景           |
+| --------- | -------- | ------------------ |
+| `Idle`    | 空闲状态 | 未处于绘制或编辑中 |
+| `Drawing` | 绘制状态 | 正在绘制几何图形   |
+| `Editing` | 编辑状态 | 正在编辑已有图形   |
 
 ### 3.2 测量相关类型
 
@@ -137,10 +137,44 @@ export type leafletGeoEditorInstance = drawInstance | measureInstance | editorIn
 ### 3.4 图层选项扩展类型
 
 ```ts
+// #region  吸附内容 
+export type SnapMode = 'vertex' | 'edge';
+export type SnapOptions = {
+    enabled: boolean; // 是否开启对齐(吸附)功能
+    modes: SnapMode[]; // 吸附模式
+    tolerance?: number; // 吸附范围阈值
+    highlight?: SnapHighlightLayerOptions; // 吸附高亮配置
+};
+
+// 吸附高亮图层配置
+export interface SnapHighlightLayerOptions {
+    enabled?: boolean;           // 是否显示高亮
+    pointStyle?: L.CircleMarkerOptions;
+    edgeStyle?: L.PolylineOptions;
+}
+// 编辑配置属性信息(规则，如果启用编辑，必然渲染顶点！但是中间点和拖动边的marker不一定渲染)
+export type EditOptions = {
+    enabled: boolean; // 是否启用编辑功能
+    vertexsMarkerStyle?: L.MarkerOptions, // 顶点marker的样式信息
+    dragLineMarkerOptions?: DragMarkerOptions; // 拖动边的marker的属性信息
+    dragMidMarkerOptions?: DragMarkerOptions; // 拖动中点的marker属性信息
+}
+// 编辑配置属性信息(规则，如果启用编辑，必然渲染顶点！但是中间点和拖动边的marker不一定渲染)
+export type ValidationOptions = {
+    allowSelfIntersect?: boolean; // 是否允许自相交
+}
+export type DragMarkerOptions = {
+    enabled: boolean; // 是否启用拖拽线功能
+    dragMarkerStyle?: L.MarkerOptions; // 拖动边的样式
+    positionRatio?: number; // 中点位置比例（0-1，默认 0.3）
+}
 // 扩展的 Leaflet 折线选项
-export interface LeafletPolylineOptionsExpends extends L.PolylineOptions {
+export interface LeafletToolsOptions {
     origin?: any;           // 存放源信息
-    defaultStyle?: any;     // 用户自定义的默认样式
+    defaultStyle?: L.PolylineOptions;     // 用户自定义的默认样式
+    snap?: SnapOptions;  // 吸附配置信息
+    edit?: EditOptions; // 编辑信息
+    validation?: ValidationOptions;   // 几何有效性校验（之前考虑放到topo里。但是topo一般是自身和其他几何的相互关系。而自相交是和自身，所以我考虑区分开）
     [key: string]: unknown  // 其他自定义属性
 }
 ```
@@ -179,10 +213,10 @@ const markerTool = new MarkerPoint(
 );
 ```
 
-| 参数名 | 类型 | 是否必填 | 说明 |
-|--------|------|----------|------|
-| `map` | `L.Map` | ✅ | Leaflet 地图实例 |
-| `options` | `L.MarkerOptions` | ❌ | 标记点样式配置 |
+| 参数名    | 类型              | 是否必填 | 说明             |
+| --------- | ----------------- | -------- | ---------------- |
+| `map`     | `L.Map`           | ✅        | Leaflet 地图实例 |
+| `options` | `L.MarkerOptions` | ❌        | 标记点样式配置   |
 
 > ⚠️ **注意**：构造函数调用后立即进入绘制模式，地图光标会变为十字准星（crosshair），用户需在地图上点击一次即可完成绘制。
 
@@ -266,14 +300,14 @@ import * as L from 'leaflet';
 
 const polylineTool = new LeafletPolyline(
   map: L.Map,
-  options?: L.PolylineOptions
+  options: LeafletToolsOptions = {}
 );
 ```
 
-| 参数名 | 类型 | 是否必填 | 说明 |
-|--------|------|----------|------|
-| `map` | `L.Map` | ✅ | Leaflet 地图实例 |
-| `options` | `L.PolylineOptions` | ❌ | 折线样式配置 |
+| 参数名    | 类型                | 是否必填 | 说明             |
+| --------- | ------------------- | -------- | ---------------- |
+| `map`     | `L.Map`             | ✅        | Leaflet 地图实例 |
+| `options` | `LeafletToolsOptions` | ❌        | 配置属性信息     |
 
 > ⚠️ **注意**：构造函数调用后立即进入绘制模式，双击鼠标完成绘制。
 
@@ -286,6 +320,10 @@ const polylineTool = new LeafletPolyline(
 返回绘制完成后的折线 GeoJSON 数据（类型为 LineString）。
 
 **异常：** 若尚未完成绘制，将抛出错误
+
+##### `setValidationRules(rules: ValidationOptions): void`
+
+更新几何校验的配置属性。
 
 ##### `destroy(): void`
 
@@ -305,8 +343,13 @@ import * as L from 'leaflet';
 
 const map = L.map('map').setView([31.23, 121.47], 13);
 const polylineTool = new LeafletPolyline(map, {
-  color: 'blue',
-  weight: 3
+  defaultStyle: {
+    color: 'blue',
+    weight: 3
+  },
+  validation: { 
+    allowSelfIntersect: false, // 默认值 true
+  }
 });
 
 polylineTool.onStateChange((state) => {
@@ -333,14 +376,14 @@ import * as L from 'leaflet';
 
 const polygonTool = new LeafletPolygon(
   map: L.Map,
-  options?: L.PolylineOptions
+  options: LeafletToolsOptions = {}
 );
 ```
 
-| 参数名 | 类型 | 是否必填 | 说明 |
-|--------|------|----------|------|
-| `map` | `L.Map` | ✅ | Leaflet 地图实例 |
-| `options` | `L.PolylineOptions` | ❌ | 多边形样式配置 |
+| 参数名    | 类型                | 是否必填 | 说明             |
+| --------- | ------------------- | -------- | ---------------- |
+| `map`     | `L.Map`             | ✅        | Leaflet 地图实例 |
+| `options` | `LeafletToolsOptions` | ❌        | 配置选项信息   |
 
 > ⚠️ **注意**：构造函数调用后立即进入绘制模式，双击鼠标完成绘制并自动闭合多边形。
 
@@ -354,6 +397,18 @@ const polygonTool = new LeafletPolygon(
 
 **异常：** 若尚未完成绘制，将抛出错误
 
+##### `setValidationRules(rules: ValidationOptions): void`
+
+更新几何校验的配置属性。
+
+##### `destroy(): void`
+
+销毁图层并清除所有地图事件监听。
+
+##### `onStateChange()`, `offStateChange()`
+
+与其他组件相同的事件监听方法。
+
 ---
 
 #### 4.4.3 使用示例
@@ -364,9 +419,14 @@ import * as L from 'leaflet';
 
 const map = L.map('map').setView([31.23, 121.47], 13);
 const polygonTool = new LeafletPolygon(map, {
-  color: 'green',
-  fillColor: '#00ff00',
-  fillOpacity: 0.3
+  defaultStyle:{
+    color: 'green',
+    fillColor: '#00ff00',
+    fillOpacity: 0.3
+  },
+  validation: {
+    allowSelfIntersect: false, // 默认值 true
+  }
 });
 ```
 
@@ -390,10 +450,10 @@ const rectangleTool = new LeafletRectangle(
 );
 ```
 
-| 参数名 | 类型 | 是否必填 | 说明 |
-|--------|------|----------|------|
-| `map` | `L.Map` | ✅ | Leaflet 地图实例 |
-| `options` | `L.PolylineOptions` | ❌ | 矩形样式配置 |
+| 参数名    | 类型                | 是否必填 | 说明             |
+| --------- | ------------------- | -------- | ---------------- |
+| `map`     | `L.Map`             | ✅        | Leaflet 地图实例 |
+| `options` | `LeafletToolsOptions` | ❌        | 属性配置信息     |
 
 > ⚠️ **注意**：构造函数调用后立即进入绘制模式，需要两次点击完成绘制（第一次确定起点，第二次确定对角点）。
 
@@ -407,9 +467,11 @@ import * as L from 'leaflet';
 
 const map = L.map('map').setView([31.23, 121.47], 13);
 const rectangleTool = new LeafletRectangle(map, {
-  color: 'orange',
-  fillColor: '#ffa500',
-  fillOpacity: 0.3
+  defaultStyle: {
+    color: 'orange',
+    fillColor: '#ffa500',
+    fillOpacity: 0.3
+  }
 });
 ```
 
@@ -433,10 +495,10 @@ const circleTool = new LeafletCircle(
 );
 ```
 
-| 参数名 | 类型 | 是否必填 | 说明 |
-|--------|------|----------|------|
-| `map` | `L.Map` | ✅ | Leaflet 地图实例 |
-| `options` | `L.CircleOptions` | ❌ | 圆形样式配置 |
+| 参数名    | 类型              | 是否必填 | 说明             |
+| --------- | ----------------- | -------- | ---------------- |
+| `map`     | `L.Map`           | ✅        | Leaflet 地图实例 |
+| `options` | `L.CircleOptions` | ❌        | 圆形样式配置     |
 
 > ⚠️ **注意**：构造函数调用后立即进入绘制模式，需要两次点击完成绘制（第一次确定圆心，第二次确定半径）。
 
@@ -498,11 +560,11 @@ const areaTool = new LeafletArea(
 );
 ```
 
-| 参数名 | 类型 | 是否必填 | 说明 |
-|--------|------|----------|------|
-| `map` | `L.Map` | ✅ | Leaflet 地图实例 |
-| `measureOptions` | `areaOptions` | ❌ | 测量配置选项 |
-| `options` | `L.PolylineOptions` | ❌ | 多边形样式配置 |
+| 参数名           | 类型                | 是否必填 | 说明             |
+| ---------------- | ------------------- | -------- | ---------------- |
+| `map`            | `L.Map`             | ✅        | Leaflet 地图实例 |
+| `measureOptions` | `areaOptions`       | ❌        | 测量配置选项     |
+| `options`        | `L.PolylineOptions` | ❌        | 多边形样式配置   |
 
 **areaOptions 默认值：**
 ```ts
@@ -561,11 +623,11 @@ const distanceTool = new LeafletDistance(
 );
 ```
 
-| 参数名 | 类型 | 是否必填 | 说明 |
-|--------|------|----------|------|
-| `map` | `L.Map` | ✅ | Leaflet 地图实例 |
-| `measureOptions` | `distanceOptions` | ❌ | 测量配置选项 |
-| `options` | `L.PolylineOptions` | ❌ | 折线样式配置 |
+| 参数名           | 类型                | 是否必填 | 说明             |
+| ---------------- | ------------------- | -------- | ---------------- |
+| `map`            | `L.Map`             | ✅        | Leaflet 地图实例 |
+| `measureOptions` | `distanceOptions`   | ❌        | 测量配置选项     |
+| `options`        | `L.PolylineOptions` | ❌        | 折线样式配置     |
 
 **distanceOptions 默认值：**
 ```ts
@@ -619,15 +681,15 @@ src/edit
 
 **核心特性对比：**
 
-| 特性 | LeafletPolygonEditor | LeafletRectangleEditor |
-|------|-------------------|---------------------|
-| **图形类型** | 任意多边形、MultiPolygon | 矩形（保持矩形特性） |
-| **顶点编辑** | ✅ 支持任意顶点拖拽、删除 | ✅ 支持4顶点拖拽（保持矩形） |
-| **中点插入** | ✅ 支持边线中点插入新顶点 | ❌ 不支持（矩形特性限制） |
-| **边线拖动** | ✅ 支持拖动整条边线 | ✅ 支持拖动整条边线 |
-| **吸附功能** | ✅ 顶点吸附、边线吸附 | ✅ 顶点吸附、边线吸附 |
-| **撤销/重做** | ✅ 完整历史记录 | ✅ 完整历史记录 |
-| **图层显隐** | ✅ 支持显隐控制 | ✅ 支持显隐控制 |
+| 特性          | LeafletPolygonEditor     | LeafletRectangleEditor      |
+| ------------- | ------------------------ | --------------------------- |
+| **图形类型**  | 任意多边形、MultiPolygon | 矩形（保持矩形特性）        |
+| **顶点编辑**  | ✅ 支持任意顶点拖拽、删除 | ✅ 支持4顶点拖拽（保持矩形） |
+| **中点插入**  | ✅ 支持边线中点插入新顶点 | ❌ 不支持（矩形特性限制）    |
+| **边线拖动**  | ✅ 支持拖动整条边线       | ✅ 支持拖动整条边线          |
+| **吸附功能**  | ✅ 顶点吸附、边线吸附     | ✅ 顶点吸附、边线吸附        |
+| **撤销/重做** | ✅ 完整历史记录           | ✅ 完整历史记录              |
+| **图层显隐**  | ✅ 支持显隐控制           | ✅ 支持显隐控制              |
 
 ---
 
@@ -690,20 +752,20 @@ import * as L from 'leaflet';
 
 const editor = new LeafletPolygonEditor(
   map: L.Map,
-  options?: LeafletPolylineOptionsExpends,
+  options?: LeafletToolsOptions,
   defaultGeometry?: GeoJSON.Geometry
 );
 ```
 
-| 参数名 | 类型 | 是否必填 | 说明 |
-|--------|------|----------|------|
-| `map` | `L.Map` | ✅ | Leaflet 地图实例 |
-| `options` | `LeafletPolylineOptionsExpends` | ❌ | 图层样式和配置 |
-| `defaultGeometry` | `GeoJSON.Geometry` | ❌ | 初始图形（Polygon 或 MultiPolygon） |
+| 参数名            | 类型                            | 是否必填 | 说明                                |
+| ----------------- | ------------------------------- | -------- | ----------------------------------- |
+| `map`             | `L.Map`                         | ✅        | Leaflet 地图实例                    |
+| `options`         | `LeafletToolsOptions` | ❌        | 图层样式和配置                      |
+| `defaultGeometry` | `GeoJSON.Geometry`              | ❌        | 初始图形（Polygon 或 MultiPolygon） |
 
 **配置选项说明：**
 ```ts
-type LeafletPolylineOptionsExpends = L.PolylineOptions & {
+type LeafletToolsOptions = L.PolylineOptions & {
   snap?: SnapOptions;          // 吸附配置
   origin?: any;               // 源信息
   defaultStyle?: any;         // 默认样式
@@ -727,11 +789,11 @@ type LeafletPolylineOptionsExpends = L.PolylineOptions & {
 
 注册状态变化监听器，支持以下状态：
 
-| 状态值 | 描述 | 触发条件 |
-|--------|------|----------|
-| `Idle` | 空闲状态 | 完成绘制/编辑、取消编辑 |
+| 状态值    | 描述     | 触发条件                     |
+| --------- | -------- | ---------------------------- |
+| `Idle`    | 空闲状态 | 完成绘制/编辑、取消编辑      |
 | `Drawing` | 绘制状态 | 创建新多边形（无默认图形时） |
-| `Editing` | 编辑状态 | 双击多边形进入编辑模式 |
+| `Editing` | 编辑状态 | 双击多边形进入编辑模式       |
 
 **示例：**
 ```ts
@@ -1161,20 +1223,20 @@ import * as L from 'leaflet';
 
 const editor = new LeafletRectangleEditor(
   map: L.Map,
-  options?: LeafletPolylineOptionsExpends,
+  options?: LeafletToolsOptions,
   defaultGeometry?: GeoJSON.Geometry
 );
 ```
 
-| 参数名 | 类型 | 是否必填 | 说明 |
-|--------|------|----------|------|
-| `map` | `L.Map` | ✅ | Leaflet 地图实例 |
-| `options` | `LeafletPolylineOptionsExpends` | ❌ | 图层样式和配置 |
-| `defaultGeometry` | `GeoJSON.Geometry` | ❌ | 初始矩形图形（Polygon类型） |
+| 参数名            | 类型                            | 是否必填 | 说明                        |
+| ----------------- | ------------------------------- | -------- | --------------------------- |
+| `map`             | `L.Map`                         | ✅        | Leaflet 地图实例            |
+| `options`         | `LeafletToolsOptions` | ❌        | 图层样式和配置              |
+| `defaultGeometry` | `GeoJSON.Geometry`              | ❌        | 初始矩形图形（Polygon类型） |
 
 **配置选项说明：**
 ```ts
-type LeafletPolylineOptionsExpends = L.PolylineOptions & {
+type LeafletToolsOptions = L.PolylineOptions & {
   snap?: SnapOptions;          // 吸附配置
   origin?: any;               // 源信息
   defaultStyle?: any;         // 默认样式
@@ -1203,11 +1265,11 @@ type SnapOptions = {
 
 注册状态变化监听器。
 
-| 状态值 | 描述 | 触发条件 |
-|--------|------|----------|
-| `Idle` | 空闲状态 | 完成绘制/编辑、取消编辑 |
+| 状态值    | 描述     | 触发条件                   |
+| --------- | -------- | -------------------------- |
+| `Idle`    | 空闲状态 | 完成绘制/编辑、取消编辑    |
 | `Drawing` | 绘制状态 | 创建新矩形（无默认图形时） |
-| `Editing` | 编辑状态 | 双击矩形进入编辑 |
+| `Editing` | 编辑状态 | 双击矩形进入编辑           |
 
 **示例：**
 ```ts
