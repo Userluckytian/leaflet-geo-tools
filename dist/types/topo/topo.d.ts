@@ -1,7 +1,7 @@
 import * as L from 'leaflet';
 import LeafletPolyline from '../draw/polyline';
-import { TopoReshapeFeatureResult, type TopoClipResult, type TopoMergeResult } from '../types';
-export default class LeafletTopology {
+import { type ReshapeOptions, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult } from '../types';
+export declare class LeafletTopology {
     private static instance;
     private map;
     drawLineLayer: LeafletPolyline | null;
@@ -21,9 +21,9 @@ export default class LeafletTopology {
      * */
     merge(callback: (result: TopoMergeResult) => void): void;
     /**
-   * 执行整形要素工具操作
-   * */
-    reshapeFeature(callback: (result: TopoReshapeFeatureResult) => void): void;
+     * 执行整形要素工具操作
+     * */
+    reshapeFeature(options: ReshapeOptions, callback: (result: TopoReshapeFeatureResult) => void): void;
     /**
      * 执行线裁剪操作
      * */
@@ -52,4 +52,9 @@ export default class LeafletTopology {
      * @memberof LeafletTopology
      */
     getSelectLayers(): L.GeoJSON<any, import("geojson").Geometry>[];
+    /**
+       * 完全销毁单例实例
+       * 应在页面卸载或组件销毁时调用
+       */
+    destroy(): void;
 }

@@ -27,6 +27,9 @@ export type EditOptions = {
     dragLineMarkerOptions?: DragMarkerOptions;
     dragMidMarkerOptions?: DragMarkerOptions;
 };
+export type ValidationOptions = {
+    allowSelfIntersect?: boolean;
+};
 export type DragMarkerOptions = {
     enabled: boolean;
     dragMarkerStyle?: L.MarkerOptions;
@@ -67,11 +70,12 @@ export type MidpointPair = {
     insert: L.Marker | null;
     edge: L.Marker | null;
 };
-export interface LeafletPolylineOptionsExpends extends L.PolylineOptions {
+export interface LeafletToolsOptions {
     origin?: any;
-    defaultStyle?: any;
+    defaultStyle?: L.PolylineOptions;
     snap?: SnapOptions;
     edit?: EditOptions;
+    validation?: ValidationOptions;
     [key: string]: unknown;
 }
 export interface TopoMergeResult {

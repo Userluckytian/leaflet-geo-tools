@@ -4,6 +4,7 @@ export default class LeafletCircle {
     private map;
     private circleLayer;
     private drawLayerStyle;
+    private errorDrawLayerStyle;
     private center;
     private radius;
     private tempCoords;
@@ -40,6 +41,7 @@ export default class LeafletCircle {
      *
      * @private
      * @param { [][]} coords
+     * @param {boolean} valid 几何形状的有效性，无效几何的颜色变色
      * @memberof LeafletCircle
      */
     private renderLayer;
@@ -84,7 +86,7 @@ export default class LeafletCircle {
     /** 清空所有状态监听器
      *
      */
-    clearAllStateListeners(): void;
+    private clearAllStateListeners;
     /** 内部使用，状态改变时，触发所有的监听事件
      *
      *
@@ -92,4 +94,14 @@ export default class LeafletCircle {
      * @memberof LeafletCircle
      */
     private updateAndNotifyStateChange;
+    /** 使用 turf.booleanValid 校验圆形有效性
+     *
+     *
+     * @private
+     * @param {L.LatLng} center
+     * @param {number} radius
+     * @return {*}  {boolean}
+     * @memberof LeafletCircle
+     */
+    private isValidCircle;
 }

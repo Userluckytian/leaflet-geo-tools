@@ -1,13 +1,14 @@
 import * as L from 'leaflet';
-import { PolygonEditorState } from '../types';
+import { PolygonEditorState, type LeafletToolsOptions } from '../types';
 export default class LeafletRectangle {
     private map;
     private rectangleLayer;
     private drawLayerStyle;
+    private errorDrawLayerStyle;
     private tempCoords;
     private currentState;
     private stateListeners;
-    constructor(map: L.Map, options?: L.PolylineOptions);
+    constructor(map: L.Map, options?: LeafletToolsOptions);
     private initLayers;
     /** 初始化地图事件监听
      *
@@ -45,6 +46,7 @@ export default class LeafletRectangle {
      *
      * @private
      * @param { [][]} coords
+     * @param {boolean} valid
      * @memberof LeafletRectangle
      */
     private renderLayer;
@@ -82,7 +84,7 @@ export default class LeafletRectangle {
     /** 清空所有状态监听器
      *
      */
-    clearAllStateListeners(): void;
+    private clearAllStateListeners;
     /** 内部使用，状态改变时，触发所有的监听事件
      *
      *
@@ -90,4 +92,13 @@ export default class LeafletRectangle {
      * @memberof LeafletRectangle
      */
     private updateAndNotifyStateChange;
+    /** 使用 turf.booleanValid 校验矩形有效性
+     *
+     *
+     * @private
+     * @param {L.LatLng[]} coords
+     * @return {*}  {boolean}
+     * @memberof LeafletRectangle
+     */
+    private isValidRectangle;
 }

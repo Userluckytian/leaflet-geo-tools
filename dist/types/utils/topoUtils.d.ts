@@ -1,4 +1,4 @@
-import type { TopoClipResult, TopoReshapeFeatureResult } from "../types";
+import type { ReshapeOptions, TopoClipResult, TopoReshapeFeatureResult } from "../types";
 /** 保存裁剪后的图层
  *
  * @param {Feature<any>} lineFeature 绘制的线Feature
@@ -19,4 +19,4 @@ export declare function mergePolygon(selLayers: any): GeoJSON.Feature | null;
  * @param {L.GeoJSON[]} selLayers
  * @return {*}  {TopoReshapeFeatureResult}
  */
-export declare function reshapeSelectedLayersByLine(sketchLine: GeoJSON.Feature<any>, selLayers: L.GeoJSON[], map: L.Map): TopoReshapeFeatureResult;
+export declare function reshapeSelectedLayersByLine(sketchLine: GeoJSON.Feature<any>, selLayers: L.GeoJSON[], options?: ReshapeOptions): TopoReshapeFeatureResult;

@@ -1,13 +1,15 @@
 import * as L from 'leaflet';
-import { PolygonEditorState } from '../types';
+import { PolygonEditorState, type LeafletToolsOptions, type ValidationOptions } from '../types';
 export default class LeafletPolygon {
     private map;
     private polygonLayer;
     private drawLayerStyle;
+    private errorDrawLayerStyle;
     private tempCoords;
     private currentState;
     private stateListeners;
-    constructor(map: L.Map, options?: L.PolylineOptions);
+    private validationOptions;
+    constructor(map: L.Map, options?: LeafletToolsOptions);
     private initLayers;
     /** 初始化地图事件监听
      *
@@ -97,7 +99,7 @@ export default class LeafletPolygon {
     /** 清空所有状态监听器
      *
      */
-    clearAllStateListeners(): void;
+    private clearAllStateListeners;
     /** 内部使用，状态改变时，触发所有的监听事件
      *
      *
@@ -105,4 +107,29 @@ export default class LeafletPolygon {
      * @memberof LeafletPolygon
      */
     private updateAndNotifyStateChange;
+    /** 更新几何校验的内容项
+     *
+     *
+     * @param {ValidationOptions} rules
+     * @memberof LeafletPolyline
+     */
+    setValidationRules(rules: ValidationOptions): void;
+    /** 校验线图层的有效性
+     *
+     *
+     * @private
+     * @param {L.LatLng[]} coords
+     * @return {*}  {boolean}
+     * @memberof LeafletRectangle
+     */
+    private isValidPolygon;
+    /** 自相交检测（使用 turf.kinks）
+     *
+     *
+     * @private
+     * @param {number[][]} coords
+     * @return {*}  {boolean} true=有自相交，false=无自相交
+     * @memberof LeafletPolyline
+     */
+    private hasSelfIntersection;
 }

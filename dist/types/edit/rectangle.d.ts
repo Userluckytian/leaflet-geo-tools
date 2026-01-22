@@ -1,5 +1,5 @@
 import * as L from 'leaflet';
-import { type LeafletPolylineOptionsExpends, type SnapOptions } from '../types';
+import { type LeafletToolsOptions, type SnapOptions } from '../types';
 import { BaseRectangleEditor } from './BaseRectangleEditor';
 export default class LeafletRectangleEditor extends BaseRectangleEditor {
     private rectangleLayer;
@@ -9,11 +9,11 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
     /** 创建一个矩形编辑类
      *
      * @param {L.Map} map 地图对象
-     * @param {LeafletPolylineOptionsExpends} [options={}] 要构建的多边形的样式属性
+     * @param {LeafletToolsOptions} [options={}] 要构建的多边形的样式属性
      * @param {GeoJSON.Geometry} [defaultGeometry] 默认的空间信息
      * @memberof LeafletEditPolygon
      */
-    constructor(map: L.Map, options?: LeafletPolylineOptionsExpends, defaultGeometry?: GeoJSON.Geometry);
+    constructor(map: L.Map, options?: LeafletToolsOptions, defaultGeometry?: GeoJSON.Geometry);
     private initLayers;
     /** 实例化矩形图层事件
      *

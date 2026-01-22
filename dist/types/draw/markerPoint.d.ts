@@ -57,7 +57,7 @@ export default class MarkerPoint {
     /** 清空所有状态监听器
      *
      */
-    clearAllStateListeners(): void;
+    private clearAllStateListeners;
     /** 内部使用，状态改变时，触发所有的监听事件
      *
      *
