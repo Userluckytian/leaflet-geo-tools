@@ -42,20 +42,20 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
             this.map.getContainer().style.cursor = existGeometry ? 'grab' : 'crosshair';
             // 不需要设置十字光标和禁用双击放大
             existGeometry ? this.map.doubleClickZoom.enable() : this.map.doubleClickZoom.disable();
-            this.initLayers(options, existGeometry ? defaultGeometry : undefined);
+            this.drawLayerStyle = {...this.drawLayerStyle, ...options?.defaultStyle};
+            this.initLayers(existGeometry ? defaultGeometry : undefined);
             this.initMapEvent(this.map);
         }
     }
 
     // 初始化图层
-    private initLayers(options: LeafletToolsOptions, defaultGeometry?: GeoJSON.Geometry): void {
+    private initLayers(defaultGeometry?: GeoJSON.Geometry): void {
         // 试图给一个非法的经纬度，来测试是否leaflet直接抛出异常。如果不行，后续使用[[-90, -180], [-90, -180], [-90, -180], [-90, -180]]坐标，也就是页面的左下角
-        const polygonOptions: LeafletToolsOptions = {
+        const polygonOptions = {
             pane: 'overlayPane',
             layerVisible: true, // 增加了一个自定义属性，用于用户从图层层面获取图层的显隐状态
             defaultStyle: this.drawLayerStyle,
             ...this.drawLayerStyle,
-            ...options
         };
 
         let coords: L.LatLngExpression[] | L.LatLngExpression[][] | L.LatLngExpression[][][] = [[181, 181], [181, 181], [181, 181], [181, 181]]; // 默认空图形
