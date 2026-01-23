@@ -232,9 +232,9 @@ export class LeafletTopology {
     };
     const highlightLayer = L.geoJSON(layerGeom, {
       style: highlightStyle,
-      // ['linkLayerId' as any]: layer._leaflet_id, // 添加自定义属性
+      ['linkLayerId' as any]: layer._leaflet_id, // 添加自定义属性
     });
-    (highlightLayer as any).options.linkLayerId = layer._leaflet_id;
+    // (highlightLayer as any).options.linkLayerId = layer._leaflet_id; // 这样添加是不生效的！
     this.selectedLayers.push(highlightLayer);
     this.map && this.map.addLayer(highlightLayer);
   }
