@@ -1,15 +1,16 @@
 import * as L from "leaflet";
-import { type EditOptions, type MidpointPair, type SnapOptions } from "../types";
+import { type EditOptionsExpends, type MidpointPair, type SnapOptions, type ValidationOptions } from "../types";
 import { BaseEditor } from "./BaseEditor";
 export declare abstract class BasePolygonEditor extends BaseEditor {
     protected vertexMarkers: L.Marker[][][];
     protected midpointMarkers: MidpointPair[][][];
     protected historyStack: number[][][][][];
     protected redoStack: number[][][][][];
-    protected editOptions: EditOptions;
+    protected polygonEditOptions: EditOptionsExpends;
     constructor(map: L.Map, options: {
         snap?: SnapOptions;
-        edit?: EditOptions;
+        edit?: EditOptionsExpends;
+        validation?: ValidationOptions;
     });
     /** 初始化编辑点marker的配置信息
      *
@@ -19,7 +20,7 @@ export declare abstract class BasePolygonEditor extends BaseEditor {
      * @param {DragMarkerOptions} [dragLineMarkerOptions] // 边线拖拽标记配置信息
      * @memberof BasePolygonEditor
      */
-    private initEditOptions;
+    private initPolygonEditOptions;
     /** 插入中间点坐标
      *
      *
@@ -44,7 +45,7 @@ export declare abstract class BasePolygonEditor extends BaseEditor {
      * 更新编辑配置
      * @param options 编辑配置
      */
-    updateEditOptions(options: EditOptions): void;
+    updateEditOptions(options: EditOptionsExpends): void;
     /**
      * 获取是否启用编辑
      */

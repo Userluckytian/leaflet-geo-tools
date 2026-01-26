@@ -4,6 +4,7 @@ import { BaseRectangleEditor } from './BaseRectangleEditor';
 export default class LeafletRectangleEditor extends BaseRectangleEditor {
     private rectangleLayer;
     private drawLayerStyle;
+    private errorDrawLayerStyle;
     private tempCoords;
     private lastMoveCoord;
     /** 创建一个矩形编辑类
@@ -78,6 +79,14 @@ export default class LeafletRectangleEditor extends BaseRectangleEditor {
      * @memberof LeafletEditRectangle
      */
     private renderLayerFromCoords;
+    /** 完成绘制
+     *
+     *
+     * @private
+     * @param {L.LatLng[]} finalCoords
+     * @memberof LeafletRectangleEditor
+     */
+    private finishedDraw;
     /** 返回图层的空间信息
      *
      * 担心用户在绘制后，想要获取到点位的经纬度信息，遂提供吐出geojson的方法

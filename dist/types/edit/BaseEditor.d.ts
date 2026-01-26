@@ -1,5 +1,5 @@
 import * as L from "leaflet";
-import { PolygonEditorState, type EditorListenerConfigs, type GeometryIndex, type SnapHighlightLayerOptions, type SnapOptions, type SnapResult } from "../types";
+import { PolygonEditorState, type BaseEditOptions, type EditorListenerConfigs, type GeometryIndex, type SnapHighlightLayerOptions, type SnapOptions, type SnapResult, type ValidationOptions } from "../types";
 import { SnapController } from "../utils/SnapController";
 export declare abstract class BaseEditor {
     private static currentActiveEditor;
@@ -14,8 +14,11 @@ export declare abstract class BaseEditor {
     private highlightCircleMarker;
     private highlightEdgeLayer;
     protected snapHighlightOptions: SnapHighlightLayerOptions;
+    protected baseEditOptions: BaseEditOptions;
+    protected validationOptions: ValidationOptions;
     constructor(map: L.Map, options: {
         snap?: SnapOptions;
+        validation?: ValidationOptions;
     });
     /**
      * 激活当前编辑器实例
@@ -153,6 +156,20 @@ export declare abstract class BaseEditor {
      */
     protected clearSnapHighlights(): void;
     protected cleanupSnapResources(): void;
+    /** 初始化编辑点marker的配置信息
+     *
+     *
+     * @protected
+     * @memberof BaseEditor
+     */
+    protected initBaseEditOptions(options?: BaseEditOptions): BaseEditOptions;
+    /** 更新编辑配置
+      *
+      *
+      * @abstract
+      * @memberof BaseEditor
+      */
+    abstract updateEditOptions(options: BaseEditOptions): void;
     /** 退出编辑模式
      *
      *
@@ -178,4 +195,36 @@ export declare abstract class BaseEditor {
      * @memberof BaseEditor
      */
     protected buildGeometryIndex(geometry: GeoJSON.Geometry): GeometryIndex;
+    /** 更新几何校验的内容项
+     *
+     *
+     * @param {ValidationOptions} rules
+     * @memberof LeafletPolyline
+     */
+    setValidationOptions(rules: ValidationOptions): void;
+    /** 获取几何校验的内容项
+     *
+     *
+     * @param {ValidationOptions} rules
+     * @memberof LeafletPolyline
+     */
+    getValidationOptions(): ValidationOptions;
+    /** 校验面图层的有效性
+     *
+     *
+     * @private
+     * @param {L.LatLng[]} coords
+     * @return {*}  {boolean}
+     * @memberof LeafletRectangle
+     */
+    isValidPolygon(coords: number[][]): boolean;
+    /** 自相交检测（使用 turf.kinks）
+     *
+     *
+     * @private
+     * @param {number[][]} coords
+     * @return {*}  {boolean} true=有自相交，false=无自相交
+     * @memberof LeafletPolyline
+     */
+    private hasSelfIntersection;
 }

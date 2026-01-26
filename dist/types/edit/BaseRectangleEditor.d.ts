@@ -1,23 +1,16 @@
-import { type EditOptions, type SnapOptions } from "../types";
+import * as L from 'leaflet';
+import { type BaseEditOptions, type SnapOptions, type ValidationOptions } from "../types";
 import { BaseEditor } from "./BaseEditor";
 export declare abstract class BaseRectangleEditor extends BaseEditor {
     protected vertexMarkers: L.Marker[];
     protected historyStack: number[][][];
     protected redoStack: number[][][];
-    protected editOptions: EditOptions;
+    protected rectEditConfig: BaseEditOptions | null;
     constructor(map: L.Map, options: {
         snap?: SnapOptions;
-        edit?: EditOptions;
+        edit?: BaseEditOptions;
+        validation?: ValidationOptions;
     });
-    /** 初始化编辑点marker的配置信息
-     *
-     *
-     * @private
-     * @param {DragMarkerOptions} [dragMidMarkerOptions] // 中点拖拽标记配置信息
-     * @param {DragMarkerOptions} [dragLineMarkerOptions] // 边线拖拽标记配置信息
-     * @memberof BasePolygonEditor
-     */
-    private initEditOptions;
     /** 撤回到上一步
      *
      *
@@ -61,7 +54,7 @@ export declare abstract class BaseRectangleEditor extends BaseEditor {
      * 更新编辑配置
      * @param options 编辑配置
      */
-    updateEditOptions(options: EditOptions): void;
+    updateEditOptions(options: BaseEditOptions): void;
     /**
      * 获取是否启用编辑
      */
@@ -85,4 +78,13 @@ export declare abstract class BaseRectangleEditor extends BaseEditor {
      * @memberof SimpleBaseEditor
      */
     protected abstract reBuildMarkerAndRender(latlngs: number[][]): void;
+    /** 使用 turf.booleanValid 校验矩形有效性
+     *
+     *
+     * @private
+     * @param {L.LatLng[]} coords
+     * @return {*}  {boolean}
+     * @memberof LeafletRectangle
+     */
+    protected isValidRectangle(coords: L.LatLng[]): boolean;
 }

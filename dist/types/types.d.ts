@@ -21,12 +21,14 @@ export interface SnapHighlightLayerOptions {
     pointStyle?: L.CircleMarkerOptions;
     edgeStyle?: L.PolylineOptions;
 }
-export type EditOptions = {
+export interface BaseEditOptions {
     enabled: boolean;
     vertexsMarkerStyle?: L.MarkerOptions;
+}
+export interface EditOptionsExpends extends BaseEditOptions {
     dragLineMarkerOptions?: DragMarkerOptions;
     dragMidMarkerOptions?: DragMarkerOptions;
-};
+}
 export type ValidationOptions = {
     allowSelfIntersect?: boolean;
 };
@@ -71,11 +73,14 @@ export type MidpointPair = {
     edge: L.Marker | null;
 };
 export interface LeafletToolsOptions {
-    origin?: any;
-    defaultStyle?: L.PolylineOptions;
+    defaultStyle?: LeafletPolylineOptions;
     snap?: SnapOptions;
-    edit?: EditOptions;
+    edit?: EditOptionsExpends;
     validation?: ValidationOptions;
+    validErrorPolygonStyle?: L.PolylineOptions;
+}
+export interface LeafletPolylineOptions extends L.PolylineOptions {
+    origin?: any;
     [key: string]: unknown;
 }
 export interface TopoMergeResult {

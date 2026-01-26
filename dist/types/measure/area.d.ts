@@ -1,19 +1,33 @@
 import * as L from 'leaflet';
-import { PolygonEditorState } from '../types';
-type areaOptions = {
+import { PolygonEditorState, type ValidationOptions } from '../types';
+export type areaOptions = {
     precision?: number;
-    lang: 'en' | 'zh';
+    lang?: 'en' | 'zh';
+    polygonStyle?: L.PolylineOptions;
+    validErrorPolygonStyle?: L.PolylineOptions;
+    validation?: ValidationOptions;
+    markerStyle?: areaMarker;
+};
+export type areaMarker = {
+    containerClassName: string;
+    dotClassName: string;
+    labelClassName: string;
+};
+export type FormattedArea = {
+    val: number;
+    unit: string;
 };
 export default class LeafletArea {
     private map;
     private polygonLayer;
-    private drawLayerStyle;
     private markerLayer;
     private tempCoords;
     private measureOptions;
+    private static markerStyle;
     private currentState;
     private stateListeners;
-    constructor(map: L.Map, measureOptions?: areaOptions, options?: L.PolylineOptions);
+    private validationOptions;
+    constructor(map: L.Map, measureOptions?: areaOptions);
     private initLayers;
     /** 初始化地图事件监听
      *
@@ -118,7 +132,7 @@ export default class LeafletArea {
     /** 清空所有状态监听器
      *
      */
-    clearAllStateListeners(): void;
+    private clearAllStateListeners;
     /** 内部使用，状态改变时，触发所有的监听事件
      *
      *
@@ -126,5 +140,29 @@ export default class LeafletArea {
      * @memberof LeafletArea
      */
     private updateAndNotifyStateChange;
+    /** 更新几何校验的内容项
+     *
+     *
+     * @param {ValidationOptions} rules
+     * @memberof LeafletPolyline
+     */
+    setValidationRules(rules: ValidationOptions): void;
+    /** 校验线图层的有效性
+     *
+     *
+     * @private
+     * @param {L.LatLng[]} coords
+     * @return {*}  {boolean}
+     * @memberof LeafletRectangle
+     */
+    private isValidPolygon;
+    /** 自相交检测（使用 turf.kinks）
+     *
+     *
+     * @private
+     * @param {number[][]} coords
+     * @return {*}  {boolean} true=有自相交，false=无自相交
+     * @memberof LeafletPolyline
+     */
+    private hasSelfIntersection;
 }
-export {};

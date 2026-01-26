@@ -4,6 +4,7 @@ import { BasePolygonEditor } from './BasePolygonEditor';
 export default class LeafletPolygonEditor extends BasePolygonEditor {
     private polygonLayer;
     private drawLayerStyle;
+    private errorDrawLayerStyle;
     private tempCoords;
     private lastMoveCoord;
     /** 创建一个多边形编辑类
@@ -71,6 +72,14 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
      * @memberof LeafletEditPolygon
      */
     private renderLayer;
+    /** 完成绘制（结束绘制）
+     *
+     *
+     * @private
+     * @param {number[][][][]} finalCoords
+     * @memberof LeafletPolygonEditor
+     */
+    private finishedDraw;
     /** 返回图层的空间信息
      *
      * 担心用户在绘制后，想要获取到点位的经纬度信息，遂提供吐出geojson的方法

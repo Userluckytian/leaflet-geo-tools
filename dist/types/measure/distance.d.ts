@@ -1,18 +1,29 @@
 import { type Units } from '@turf/turf';
 import * as L from 'leaflet';
 import { PolygonEditorState } from '../types';
-type distanceOptions = {
-    units: Units;
+export type distanceOptions = {
+    units?: Units;
     precision?: number;
-    lang: 'en' | 'zh';
+    lang?: 'en' | 'zh';
+    drawLineStyle?: L.PolylineOptions;
+    markerStyle?: distanceMarker;
+};
+export type distanceMarker = {
+    containerClassName: string;
+    dotClassName: string;
+    labelClassName: string;
+};
+export type FormattedDistance = {
+    val: number;
+    unit: string;
 };
 export default class LeafletDistance {
     private map;
     private lineLayer;
-    private drawLayerStyle;
     private tempCoords;
     private markerArr;
     private measureOptions;
+    private static markerStyle;
     private totalDistance;
     private currentState;
     private stateListeners;
@@ -23,7 +34,7 @@ export default class LeafletDistance {
      * @param {L.PolylineOptions} [options={}] 测量距离时的polyline样式，允许用户自定义
      * @memberof LeafletDistance
      */
-    constructor(map: L.Map, measureOptions?: distanceOptions, options?: L.PolylineOptions);
+    constructor(map: L.Map, measureOptions?: distanceOptions);
     private initLayers;
     /** 初始化地图事件监听
      *
@@ -150,7 +161,7 @@ export default class LeafletDistance {
     /** 清空所有状态监听器
      *
      */
-    clearAllStateListeners(): void;
+    private clearAllStateListeners;
     /** 内部使用，状态改变时，触发所有的监听事件
      *
      *
@@ -159,4 +170,3 @@ export default class LeafletDistance {
      */
     private updateAndNotifyStateChange;
 }
-export {};
