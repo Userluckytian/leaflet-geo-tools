@@ -172,7 +172,7 @@ export default class LeafletArea {
                 this.reset();
             } else {
                 // 校验失败，保持绘制状态
-                console.warn('折线无效，请继续绘制或调整');
+                throw new Error('绘制面无效，请继续绘制或调整');
                 // 不执行 reset()，让用户继续调整
             }
         }
