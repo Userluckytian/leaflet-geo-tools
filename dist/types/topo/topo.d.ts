@@ -8,6 +8,7 @@ export declare class LeafletTopology {
     private selectedLayers;
     private clickHandler;
     private drawLineListener;
+    private isPicking;
     constructor(map: L.Map);
     static getInstance(map: L.Map): LeafletTopology;
     /** 选择图层
@@ -52,6 +53,12 @@ export declare class LeafletTopology {
      * @memberof LeafletTopology
      */
     getSelectLayers(): L.GeoJSON<any, import("geojson").Geometry>[];
+    /**
+     * 静态方法：检查指定地图是否处于选择图层状态
+     * @param map 地图实例
+     * @returns {boolean} 是否正在选择图层
+     */
+    static isPicking(map: L.Map): boolean;
     /**
        * 完全销毁单例实例
        * 应在页面卸载或组件销毁时调用
