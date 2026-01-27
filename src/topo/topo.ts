@@ -1,6 +1,5 @@
 import * as L from 'leaflet';
 import { queryLayerOnClick, queryLayersIntersectingGeometry } from '../utils/commonUtils';
-import { union } from '@turf/turf';
 import LeafletPolyline from '../draw/polyline';
 import { PolygonEditorState, type ReshapeOptions, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult } from '../types';
 import { clipSelectedLayersByLine, mergePolygon, reshapeSelectedLayersByLine } from '../utils/topoUtils';
@@ -12,6 +11,7 @@ export class LeafletTopology {
   private selectedLayers: L.GeoJSON[] = [];
   private clickHandler: ((e: L.LeafletMouseEvent) => void) | null = null;
   private drawLineListener: ((status: PolygonEditorState) => void) | null = null;
+  private isPicking: boolean = false; // 是否处于选择图层状态（这个状态主要用于edit编辑器在编辑时，确保当前不是选择图层的状态，如果是选择图层的状态，则editor编辑器的事件应该禁止，不让其触发）
 
   constructor(map: L.Map) {
     this.map = map;
@@ -34,6 +34,7 @@ export class LeafletTopology {
       throw new Error('未获取到map对象');
     }
     this.cleanAll();
+    this.isPicking = true; // 设置选择状态
     this.map.getContainer().style.cursor = 'pointer';
     this.disableMapOpt();
 
@@ -51,7 +52,6 @@ export class LeafletTopology {
       // console.log('realPickedLayer', realPickedLayer);
       realPickedLayer.forEach(layer => {
         const pickerLayerId = layer._leaflet_id;
-        // console.log('this.selectedLayers', this.selectedLayers);
         const findLayerIdx = this.selectedLayers.findIndex((layer: any) => layer?.options && layer?.options?.linkLayerId === pickerLayerId);
         if (findLayerIdx !== -1) {
           const pickLayer = this.selectedLayers[findLayerIdx];
@@ -234,7 +234,6 @@ export class LeafletTopology {
       style: highlightStyle,
       ['linkLayerId' as any]: layer._leaflet_id, // 添加自定义属性
     });
-    // (highlightLayer as any).options.linkLayerId = layer._leaflet_id; // 这样添加是不生效的！
     this.selectedLayers.push(highlightLayer);
     this.map && this.map.addLayer(highlightLayer);
   }
@@ -275,6 +274,8 @@ export class LeafletTopology {
     }
     this.selectedLayers = [];
     this.enableMapOpt();
+    // 释放pick图层的锁（状态）
+    this.isPicking = false; //  退出选择状态（false）
   }
 
   /** 返回选择的全部图层
@@ -286,6 +287,21 @@ export class LeafletTopology {
     return this.selectedLayers;
   }
 
+  /**
+   * 静态方法：检查指定地图是否处于选择图层状态
+   * @param map 地图实例
+   * @returns {boolean} 是否正在选择图层
+   */
+  public static isPicking(map: L.Map): boolean {
+    if (!LeafletTopology.instance || !LeafletTopology.instance.map) {
+      return false;
+    }
+    // 确保是同一个地图实例
+    if (LeafletTopology.instance.map !== map) {
+      return false;
+    }
+    return LeafletTopology.instance.isPicking;
+  }
 
   /**
      * 完全销毁单例实例
