@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>leaflet-geo-tools - 绘制面示例</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; }
+        #map { width: 100%; height: 100vh; }
+        
+        .toolbar {
+            position: absolute; top: 10px; left: 10px; z-index: 1000;
+            background: white; padding: 15px; border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.15); min-width: 200px;
+        }
+        .toolbar h3 { margin: 0 0 15px 0; font-size: 16px; color: #333; border-bottom: 2px solid #008BFF; padding-bottom: 8px; }
+        .toolbar button { display: block; width: 100%; margin: 5px 0; padding: 8px 12px; cursor: pointer;
+            border: 1px solid #ddd; background: #fff; border-radius: 4px; font-size: 13px; }
+        .toolbar button:hover { background: #f0f0f0; border-color: #008BFF; }
+        .toolbar button.active { background: #008BFF; color: white; border-color: #008BFF; }
+        
+        .switch-container {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 0; border-bottom: 1px solid #f0f0f0;
+        }
+        .switch-label { font-size: 13px; color: #333; }
+        .switch {
+            position: relative; width: 44px; height: 24px; background: #ccc;
+            border-radius: 12px; cursor: pointer; transition: background 0.3s;
+        }
+        .switch.active { background: #008BFF; }
+        .switch::after {
+            content: ''; position: absolute; width: 20px; height: 20px;
+            border-radius: 50%; background: white; top: 2px; left: 2px; transition: left 0.3s;
+        }
+        .switch.active::after { left: 22px; }
+        
+        .layer-list {
+            position: absolute; top: 10px; right: 10px; z-index: 1000;
+            background: white; padding: 15px; border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.15); max-width: 350px; max-height: 80vh; overflow-y: auto;
+        }
+        .layer-list h3 { margin: 0 0 15px 0; font-size: 16px; color: #333; border-bottom: 2px solid #008BFF; padding-bottom: 8px; }
+        .layer-item { padding: 10px; margin: 5px 0; background: #f9f9f9; border-radius: 4px;
+            border-left: 3px solid #008BFF; display: flex; justify-content: space-between; align-items: center; }
+        .layer-info { flex: 1; font-size: 12px; }
+        .layer-type { font-weight: bold; color: #008BFF; }
+        .layer-time { color: #999; font-size: 11px; margin-top: 2px; }
+        .layer-remove { background: #ff4444; color: white; border: none; padding: 4px 8px;
+            border-radius: 4px; cursor: pointer; font-size: 11px; }
+        .layer-remove:hover { background: #cc0000; }
+        
+        .help-panel {
+            position: absolute; bottom: 10px; left: 10px; z-index: 1000;
+            background: rgba(255,255,255,0.95); padding: 15px; border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.15); max-width: 400px; display: none;
+        }
+        .help-panel.visible { display: block; }
+        .help-panel h4 { margin: 0 0 10px 0; color: #008BFF; }
+        .help-panel ol { margin: 0; padding-left: 20px; font-size: 12px; line-height: 1.8; }
+        
+        .api-docs {
+            position: absolute; bottom: 10px; right: 10px; z-index: 1000;
+            background: white; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+            max-width: 600px; max-height: 70vh; overflow: hidden; display: flex; flex-direction: column;
+        }
+        .api-docs-header { padding: 12px 15px; background: #008BFF; color: white; cursor: pointer;
+            display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+        .api-docs-content { padding: 15px; overflow-y: auto; display: none; }
+        .api-docs.expanded .api-docs-content { display: block; }
+        .api-class { margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
+        .api-class-name { font-size: 16px; font-weight: bold; color: #008BFF; margin-bottom: 10px; }
+        .api-constructor { margin-bottom: 15px; }
+        .api-constructor-title { font-size: 14px; font-weight: bold; color: #333; margin-bottom: 8px; }
+        .api-params { background: #f5f5f5; padding: 10px; border-radius: 4px; font-family: 'Courier New', monospace;
+            font-size: 12px; margin-bottom: 8px; white-space: pre-wrap; }
+        .api-methods { margin-top: 10px; }
+        .api-method { margin-bottom: 8px; padding-left: 15px; font-size: 12px; }
+        .api-method-name { font-weight: bold; color: #008BFF; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    
+    <div class="toolbar">
+        <h3>绘制面</h3>
+        <button id="btn-draw">开始绘制</button>
+        <div class="switch-container">
+            <span class="switch-label">允许自相交</span>
+            <div class="switch active" id="switch-self-intersect"></div>
+        </div>
+        <div class="switch-container">
+            <span class="switch-label">绘制时吸附（doing）</span>
+            <div class="switch" id="switch-snap"></div>
+        </div>
+        <button id="btn-clear">清空所有</button>
+    </div>
+
+    <div class="layer-list">
+        <h3>图层列表 <span id="layer-count" style="font-size: 12px; font-weight: normal;">(0)</span></h3>
+        <div id="layer-list-content"></div>
+    </div>
+
+    <div class="help-panel" id="helpPanel">
+        <h4>操作说明</h4>
+        <ol>
+            <li>支持吸附到已存在的要素顶点、边缘线</li>
+            <li>点击地图添加点，双击完成绘制</li>
+            <li>通过Ctrl + Z：撤销最后一次添加的点（绘制状态）</li>
+            <li>绘制完成后，面会保留在地图上</li>
+        </ol>
+    </div>
+
+    <div class="api-docs" id="apiDocs">
+        <div class="api-docs-header" onclick="toggleApiDocs()">
+            <span>📖 API 文档</span>
+            <span id="api-docs-toggle">▼</span>
+        </div>
+        <div class="api-docs-content" id="apiDocsContent"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/@turf/turf@7/turf.min.js"></script>
+    <script src="https://unpkg.com/leaflet-geo-tools@latest/dist/index.js"></script>
+
+    <script>
+        console.log('检查全局变量:', window.LeafletGeoTools);
+        const GeoTools = window.LeafletGeoTools;
+
+        if (!GeoTools) {
+            alert('错误：LeafletGeoTools 未加载！');
+        }
+
+        const map = L.map('map').setView([39.9, 116.4], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        let currentTool = null;
+        const layers = [];
+        let allowSelfIntersect = true;
+        let snapEnabled = false;
+
+        function collectAllGeometryForSnap() {
+            const allLayers = [];
+            layers.forEach(layer => {
+                if (layer.tool) {
+                    if (layer.tool.polygonLayer) allLayers.push(layer.tool.polygonLayer);
+                    if (layer.tool.lineLayer) allLayers.push(layer.tool.lineLayer);
+                    if (layer.tool.rectangleLayer) allLayers.push(layer.tool.rectangleLayer);
+                    if (layer.tool.circleLayer) allLayers.push(layer.tool.circleLayer);
+                }
+            });
+            return allLayers;
+        }
+
+        document.getElementById('btn-draw').addEventListener('click', () => {
+            // 只清除正在绘制中的工具
+            if (currentTool) {
+                const state = currentTool.getCurrentState ? currentTool.getCurrentState() : 'idle';
+                if (state === 'drawing' || state === 'editing') {
+                    if (currentTool.destroy) currentTool.destroy();
+                }
+            }
+            
+            const options = {
+                validation: { allowSelfIntersect: allowSelfIntersect },
+                defaultStyle: {
+                    color: '#008BFF',
+                    fillColor: '#008BFF',
+                    fillOpacity: 0.3
+                }
+            };
+
+            if (snapEnabled) {
+                options.snap = {
+                    enabled: true,
+                    modes: ['vertex', 'edge'],
+                    tolerance: 8
+                };
+            }
+
+            currentTool = new GeoTools.LeafletPolygon(map, options);
+            document.getElementById('helpPanel').classList.add('visible');
+            
+            // 设置吸附源
+            if (snapEnabled) {
+                const snapLayers = collectAllGeometryForSnap();
+                if (snapLayers.length > 0 && currentTool.setSnapSources) {
+                    currentTool.setSnapSources(snapLayers);
+                }
+            }
+            
+            if (currentTool.onStateChange) {
+                currentTool.onStateChange((state) => {
+                    if (state === 'idle') {
+                        try {
+                            const geojson = currentTool.geojson();
+                            addLayerToList({
+                                type: '面',
+                                tool: currentTool,
+                                geojson: geojson,
+                                name: `面 - ${new Date().toLocaleTimeString()}`
+                            });
+                            currentTool = null;
+                            document.getElementById('helpPanel').classList.remove('visible');
+                        } catch (e) {
+                            console.error('获取GeoJSON失败:', e);
+                        }
+                    }
+                });
+            }
+        });
+
+        document.getElementById('switch-self-intersect').addEventListener('click', () => {
+            allowSelfIntersect = !allowSelfIntersect;
+            document.getElementById('switch-self-intersect').classList.toggle('active');
+            if (currentTool && currentTool.setValidationRules) {
+                currentTool.setValidationRules({ allowSelfIntersect: allowSelfIntersect });
+            }
+        });
+
+        document.getElementById('switch-snap').addEventListener('click', () => {
+            snapEnabled = !snapEnabled;
+            document.getElementById('switch-snap').classList.toggle('active');
+            if (currentTool) {
+                if (currentTool.updateSnapOptions) {
+                    currentTool.updateSnapOptions({
+                        enabled: snapEnabled,
+                        modes: ['vertex', 'edge'],
+                        tolerance: 8
+                    });
+                }
+                if (snapEnabled) {
+                    const snapLayers = collectAllGeometryForSnap();
+                    if (snapLayers.length > 0 && currentTool.setSnapSources) {
+                        currentTool.setSnapSources(snapLayers);
+                    }
+                }
+            }
+        });
+
+        // 键盘快捷键
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'z' && !e.shiftKey && !e.altKey) {
+                e.preventDefault();
+                // 注意：LeafletPolygon 不支持 undoDraw，只有编辑器支持
+            }
+        });
+
+        document.getElementById('btn-clear').addEventListener('click', () => {
+            if (currentTool && currentTool.destroy) currentTool.destroy();
+            currentTool = null;
+            layers.forEach(layer => {
+                if (layer.tool && layer.tool.destroy) layer.tool.destroy();
+            });
+            layers.length = 0;
+            updateLayerList();
+        });
+
+        function addLayerToList(layerInfo) {
+            layers.push(layerInfo);
+            updateLayerList();
+        }
+
+        function updateLayerList() {
+            const container = document.getElementById('layer-list-content');
+            const count = document.getElementById('layer-count');
+            count.textContent = `(${layers.length})`;
+            
+            if (layers.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">暂无图层</div>';
+                return;
+            }
+
+            container.innerHTML = layers.map((layer, index) => `
+                <div class="layer-item">
+                    <div class="layer-info">
+                        <div class="layer-type">${layer.type}</div>
+                        <div class="layer-time">${layer.name}</div>
+                    </div>
+                    <button class="layer-remove" onclick="removeLayer(${index})">移除</button>
+                </div>
+            `).join('');
+        }
+
+        function removeLayer(index) {
+            if (layers[index] && layers[index].tool) {
+                if (layers[index].tool.destroy) layers[index].tool.destroy();
+            }
+            layers.splice(index, 1);
+            updateLayerList();
+        }
+
+        function toggleApiDocs() {
+            const docs = document.getElementById('apiDocs');
+            const toggle = document.getElementById('api-docs-toggle');
+            docs.classList.toggle('expanded');
+            toggle.textContent = docs.classList.contains('expanded') ? '▲' : '▼';
+        }
+
+        document.getElementById('apiDocsContent').innerHTML = `
+            <div class="api-class">
+                <div class="api-class-name">LeafletPolygon</div>
+                <div class="api-constructor">
+                    <div class="api-constructor-title">构造函数:</div>
+                    <div class="api-params">new GeoTools.LeafletPolygon(map, options?)
+                        参数说明:
+                        map: L.Map - Leaflet地图实例（必需）
+
+                        options: LeafletToolsOptions（可选）
+                        defaultStyle?: L.PolylineOptions - 默认样式
+                            - color: string - 线条颜色（默认'#008BFF'）
+                            - fillColor: string - 填充颜色（默认'#008BFF'）
+                            - fillOpacity: number - 填充透明度（默认0.3）
+                            - weight: number - 线条宽度
+                            - 其他Leaflet Polyline样式选项...
+
+                        validation?: ValidationOptions - 校验配置
+                            allowSelfIntersect?: boolean - 是否允许自相交（默认true）
+
+                        snap?: SnapOptions - 吸附配置
+                            enabled: boolean - 是否启用吸附
+                            modes: Array<'vertex' | 'edge'> - 吸附模式
+                            tolerance?: number - 吸附阈值（像素，默认8）
+                            highlight?: SnapHighlightLayerOptions - 吸附高亮配置
+
+                        validErrorPolygonStyle?: L.PolylineOptions - 校验失败时的样式</div>
+                                        </div>
+                                        <div class="api-methods">
+                                            <div class="api-method">
+                                                <span class="api-method-name">geojson()</span>
+                                                返回: GeoJSON.Feature - 获取面的GeoJSON数据
+                                            </div>
+                                            <div class="api-method">
+                                                <span class="api-method-name">destroy()</span>
+                                                销毁图层，从地图中移除并清理资源
+                                            </div>
+                                            <div class="api-method">
+                                                <span class="api-method-name">setValidationRules(rules)</span>
+                                                动态更新校验规则
+                                                rules: ValidationOptions - { allowSelfIntersect?: boolean }
+                                            </div>
+                                            <div class="api-method">
+                                                <span class="api-method-name">onStateChange(listener)</span>
+                                                监听状态变化
+                                                listener: (state: 'idle' | 'drawing') => void
+                                            </div>
+                                            <div class="api-method">
+                                                <span class="api-method-name">offStateChange(listener)</span>
+                                                移除状态监听器
+                                            </div>
+                                            <div class="api-method">
+                                                <span class="api-method-name">setSnapSources(excludeLayers)</span>
+                                                设置吸附源（其他图层的几何信息）
+                                                excludeLayers: L.Layer[] - 要排除的图层数组
+                                            </div>
+                                            <div class="api-method">
+                                                <span class="api-method-name">updateSnapOptions(options)</span>
+                                                动态更新吸附配置
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="api-class">
+                                        <div class="api-class-name">使用示例</div>
+                                        <div class="api-params">// 基础用法
+                        const polygonTool = new GeoTools.LeafletPolygon(map);
+
+                        // 带配置的用法
+                        const polygonTool = new GeoTools.LeafletPolygon(map, {
+                            defaultStyle: {
+                                color: '#ff0000',
+                                fillColor: '#ff0000',
+                                fillOpacity: 0.5,
+                                weight: 3
+                            },
+                            validation: {
+                                allowSelfIntersect: false
+                            },
+                            snap: {
+                                enabled: true,
+                                modes: ['vertex', 'edge'],
+                                tolerance: 10
+                            },
+                            validErrorPolygonStyle: {
+                                color: 'red',
+                                fillColor: 'red',
+                                fillOpacity: 0.3
+                            }
+                        });
+
+                        // 监听绘制完成
+                        polygonTool.onStateChange((state) => {
+                            if (state === 'idle') {
+                                const geojson = polygonTool.geojson();
+                                console.log('绘制的面:', geojson);
+                            }
+                        });
+
+                        // 动态更新校验规则
+                        polygonTool.setValidationRules({ allowSelfIntersect: false });
+
+                        // 设置吸附源（吸附到其他图层）
+                        const otherLayers = [layer1, layer2];
+                        polygonTool.setSnapSources(otherLayers);
+
+                        // 动态更新吸附配置
+                        polygonTool.updateSnapOptions({ enabled: false });</div>
+            </div>
+        `;
+
+        window.removeLayer = removeLayer;
+        window.toggleApiDocs = toggleApiDocs;
+    </script>
+</body>
+</html>
