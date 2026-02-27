@@ -191,7 +191,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
             const lastCoord = [e.latlng.lat, e.latlng.lng];
             // 渲染图层, 先剔除重复坐标，双击事件实际触发了2次单机事件，所以，需要剔除重复坐标
             const ringCoords = [...this.tempCoords, lastCoord, this.tempCoords[0]];
-            const finalCoords: number[][] = this.deduplicateCoordinates(ringCoords, 9);
+            const finalCoords: number[][] = this.deduplicateCoordinates(ringCoords);
             if (this.isValidPolygon(finalCoords)) {
                 this.finishedDraw(finalCoords);
             } else {
@@ -496,7 +496,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
      * @param {number} precision - 精度（小数位数），默认6位
      * @returns {Array} 去重后的坐标数组
      */
-    private deduplicateCoordinates(coordinates: string | any[], precision = 6) {
+    private deduplicateCoordinates(coordinates: string | any[]) {
         if (!Array.isArray(coordinates) || coordinates.length === 0) {
             return [];
         }
