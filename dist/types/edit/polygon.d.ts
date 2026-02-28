@@ -85,7 +85,7 @@ export default class LeafletPolygonEditor extends BasePolygonEditor {
      * 担心用户在绘制后，想要获取到点位的经纬度信息，遂提供吐出geojson的方法
      * @memberof LeafletEditPolygon
      */
-    geojson(): import("geojson").Feature<import("geojson").Polygon | import("geojson").MultiPolygon, any>;
+    geojson(precision?: number | false | undefined): import("geojson").Feature<import("geojson").Polygon | import("geojson").MultiPolygon, any>;
     /** 返回绘制的图层
      *
      * 应用场景1： 地图上存在多个图层实例，每个图层的options属性中有其唯一id标识。现在若要删除其中一个图层，就需要先找到这个图层实例的options中存储的id标识，然后调用后台的删除接口。

@@ -63,7 +63,7 @@ export default class LeafletPolyline {
      * 担心用户在绘制后，想要获取到点位的经纬度信息，遂提供吐出geojson的方法
      * @memberof LeafletPolyLine
      */
-    geojson(): import("geojson").Feature<import("geojson").LineString | import("geojson").MultiLineString, any>;
+    geojson(precision?: number | false | undefined): import("geojson").Feature<import("geojson").LineString | import("geojson").MultiLineString, any>;
     /** 销毁图层，从地图中移除图层
      *
      *
