@@ -4,7 +4,7 @@
 */
 
 import * as L from 'leaflet';
-import { feature as turfFeature, booleanIntersects } from '@turf/turf';
+import { feature as turfFeature, booleanIntersects, booleanPointInPolygon, point, booleanValid, getCoords } from '@turf/turf';
 
 /** 查询点击位置处的图层
  * 优点：不依赖外部库，纯 Leaflet 实现（优化版本，见queryLayersIntersectingGeometry，可读性强，但依赖@turf/turf库）
@@ -28,13 +28,13 @@ export function queryLayerOnClick(map: L.Map, e: L.LeafletMouseEvent) {
         ])
     );
     let selectBoundsCoords: any =
-        L.rectangle(selectBounds).toGeoJSON(9).geometry.coordinates[0];
+        L.rectangle(selectBounds).toGeoJSON().geometry.coordinates[0];
     let selectList: any[] = [];
     map.eachLayer((layer: any) => {
         if (!layer.toGeoJSON) {
             return;
         }
-        let feature = layer.toGeoJSON(9);
+        let feature = layer.toGeoJSON();
         if (feature.type === "FeatureCollection") {
             return;
         }
@@ -123,13 +123,13 @@ export function queryLayersIntersectingGeometry(
     // 转换为标准 GeoJSON Feature
     const inputFeature: GeoJSON.Feature =
         geometry instanceof L.Polyline || geometry instanceof L.Polygon
-            ? geometry.toGeoJSON(9) as any
+            ? geometry.toGeoJSON() as any
             : geometry;
 
     map.eachLayer((layer: any) => {
         if (!layer.toGeoJSON) return;
 
-        const feature = layer.toGeoJSON(9);
+        const feature = layer.toGeoJSON();
         if (feature.type === 'FeatureCollection') return;
 
         const layerFeature = turfFeature(feature.geometry);
@@ -162,6 +162,180 @@ export function buildMarkerIcon(iconStyle = "border-radius: 50%;background: #fff
         iconSize: iconSize as L.PointExpression,
         ...options
     });
+}
+
+
+/**
+ * 简单坐标去重 - 剔除连续重复坐标
+ * @param {Array} coordinates - 坐标数组 [[lat, lng], [lat, lng], ...]
+ * @param {number} precision - 精度（小数位数），默认6位
+ * @returns {Array} 去重后的坐标数组
+ */
+export function deduplicateCoordinates(coordinates: string | any[]) {
+    if (!Array.isArray(coordinates) || coordinates.length === 0) {
+        return [];
+    }
+
+    const result = [coordinates[0]]; // 总是保留第一个坐标
+
+    for (let i = 1; i < coordinates.length; i++) {
+        const current = coordinates[i];
+        const previous = coordinates[i - 1];
+
+        // 检查当前坐标是否与上一个坐标相同（在指定精度下）
+        const isDuplicate = current[0] === previous[0] && current[1] === previous[1];
+
+        if (!isDuplicate) {
+            result.push(current);
+        }
+    }
+
+    return result;
+}
+
+/**
+ * 获取边上某个比例位置的点（例如 1/3、2/3）
+ * @param p1 起点
+ * @param p2 终点
+ * @param ratio 比例（0~1），例如 1/3 = 0.333
+ * @returns L.LatLng
+ */
+export function getFractionalPointOnEdge(p1: L.LatLng, p2: L.LatLng, ratio: number): L.LatLng {
+    const lat = p1.lat + (p2.lat - p1.lat) * ratio;
+    const lng = p1.lng + (p2.lng - p1.lng) * ratio;
+    return L.latLng(lat, lng);
+}
+
+
+/** 转换经纬度为Leaflet可接受的格式(简言之,从[经度, 纬度],变成[纬度, 经度])
+ *
+ *
+ * @private
+ * @param {GeoJSON.Geometry} geometry
+ * @return {*}  {(L.LatLngExpression[][] | L.LatLngExpression[][][])}
+ * @memberof LeafletPolygonEditor
+ */
+export function reverseLatLngs(
+    geometry: GeoJSON.Geometry
+): L.LatLngExpression[][] | L.LatLngExpression[][][] {
+    if (geometry.type === 'Polygon') {
+        // Polygon: [ [ [lng, lat], [lng, lat], ... ], [hole1], [hole2], ... ]
+        return geometry.coordinates.map(ring =>
+            ring.map(([lng, lat]) => [lat, lng])
+        );
+    } else if (geometry.type === 'MultiPolygon') {
+        // MultiPolygon: [ [ [ [lng, lat], ... ], [hole1], ... ], [ [ ... ] ], ... ]
+        return geometry.coordinates.map(polygon =>
+            polygon.map(ring =>
+                ring.map(([lng, lat]) => [lat, lng])
+            )
+        ) as any;
+    } else {
+        throw new Error('不支持的 geometry 类型: ' + geometry.type);
+    }
+}
+
+/** 转换【矩形】的geojson-经纬度坐标
+ *
+ *
+ * @private
+ * @param {GeoJSON.Geometry} geometry
+ * @return {*}  {L.LatLngBoundsExpression}
+ * @memberof LeafletRectangleEditor
+ */
+export function reverseRectLatLngs(geometry: GeoJSON.Geometry): L.LatLngBoundsExpression {
+    if (geometry.type === 'Polygon') {
+        const coords = geometry.coordinates[0]; // [[lng, lat], ...]
+        const lats = coords.map(c => c[1]);
+        const lngs = coords.map(c => c[0]);
+
+        const south = Math.min(...lats);
+        const north = Math.max(...lats);
+        const west = Math.min(...lngs);
+        const east = Math.max(...lngs);
+
+        return [[south, west], [north, east]];
+    } else {
+        throw new Error('不支持的 geometry 类型: ' + geometry.type);
+    }
+}
+/** 转换【点】的经纬度坐标
+ *
+ *
+ * @private
+ * @param {GeoJSON.Geometry} geometry
+ * @return {*}  {L.LatLngBoundsExpression}
+ * @memberof LeafletRectangleEditor
+ */
+export function reversePointLatLngs(geometry: GeoJSON.Geometry): number[] {
+    if (geometry.type === 'Point') {
+        const coords = geometry.coordinates; // [[lng, lat], ...]
+        return coords.reverse();
+    } else {
+        throw new Error('不支持的 geometry 类型: ' + geometry.type);
+    }
+}
+/** 转换【线】的经纬度坐标,并强制按照多线的结构返回。
+ *
+ *
+ * @private
+ * @param {GeoJSON.Geometry} geometry
+ * @return {*}  {L.LatLngBoundsExpression}
+ * @memberof LeafletRectangleEditor
+ */
+export function reversePolyLineLatLngs(geometry: GeoJSON.Geometry): number[][][] {
+    if (geometry.type === 'LineString') {
+        const singlePolyline = geometry.coordinates.map(([lng, lat]) => [lat, lng]);
+        return [singlePolyline]
+    } else if (geometry.type === 'MultiLineString') {
+        return geometry.coordinates.map(line => line.map(([lng, lat]) => [lat, lng]));
+    } else {
+        throw new Error('不支持的 geometry 类型: ' + geometry.type);
+    }
+}
+
+/**  判断点击事件是否点击到layer身上
+     *
+     *
+     *
+     * @private
+     * @param {L.LeafletMouseEvent} e
+     * @return {*}  {boolean}
+     * @memberof LeafletEditRectangle
+     */
+export function isClickOnLayer(e: L.LeafletMouseEvent, layer: L.Polygon | L.Rectangle | L.Circle | L.Polyline): boolean {
+    if (!layer) return false;
+
+    try {
+        const polygonGeoJSON = layer.toGeoJSON();
+        const turfPoint = point([e.latlng.lng, e.latlng.lat]);
+        return booleanPointInPolygon(turfPoint, polygonGeoJSON);
+    } catch (error) {
+        console.error('检查点击图层时出错:', error);
+        return false;
+    }
+}
+
+
+
+/** turf的校验有效性，同时增强，因为要同步进行坐标的范围进行校验
+ * 
+ * @param geom 
+ * @returns 
+ */
+export function booleanValidEnhance(geom: any) {
+    // 1. 先使用 turf 进行标准有效性检查
+    if (!booleanValid(geom)) {
+        return false;
+    }
+    // 2. 再自定义检查坐标范围
+    let coords = getCoords(geom); // 使用 turf.getCoords 安全地提取坐标
+    // 注意：这里需要一个递归遍历所有坐标的逻辑
+    // 简单起见，假设我们检查第一个坐标
+    if (Array.isArray(coords)) {
+        return isValidCoordinate(coords)
+    }
+    return true;
 }
 
 
@@ -219,4 +393,22 @@ function pointInPolygon(x: number, y: number, polyCoords: number[][]) {
     }
     return inside;
 }
+
+function isValidCoordinate(coords: any[]) {
+    for (const coord of coords) {
+        if (Array.isArray(coord)) {
+            if (typeof coord[0] === 'number' && typeof coord[1] === 'number') {
+                const result = coord[0] >= -180 && coord[0] <= 180 && coord[1] >= -90 && coord[1] <= 90;
+                if (!result) {
+                    return false;
+                }
+            } else {
+                return isValidCoordinate(coord);
+            }
+        }
+        continue;
+    }
+    return true;
+}
+
 // #endregion

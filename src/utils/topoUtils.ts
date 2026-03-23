@@ -1,7 +1,8 @@
-import { featureCollection, flattenEach, union, polygon } from "@turf/turf";
+import { flattenEach, union, featureCollection } from "@turf/turf";
 import splitPolygon from "../topo/turf-polygon-split";
-import type { ReshapeOptions, TopoClipResult, TopoReshapeFeatureResult } from "../types";
-import { reshapeLineByLine, reshapeMultiPolygonByLine, reshapePolygonByLine } from "../topo/turf-reshape-feature";
+import { reshapeLineByLine, reshapePolygonByLine, reshapeMultiPolygonByLine } from "../topo/turf-reshape-feature";
+import { TopoClipResult, ReshapeOptions, TopoReshapeFeatureResult } from "../types";
+
 
 /** 保存裁剪后的图层
  *
@@ -18,7 +19,7 @@ export function clipSelectedLayersByLine(
     const clipsPolygons: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>[] = [];
 
     selLayers.forEach((layer: L.GeoJSON) => {
-        const geoData = layer.toGeoJSON(9);
+        const geoData = layer.toGeoJSON();
         let layerHasResult = false;
 
         // 使用Turf的遍历方法来处理所有几何体
@@ -65,16 +66,16 @@ export function mergePolygon(selLayers: any): GeoJSON.Feature | null {
     selLayers.forEach((layer: any, idx: number) => {
         // 这块的逻辑就是：遍历到第一个面时，由于只有一个面，所以没法做合并操作，必须是遍历到第二个面才开始操作。
         if (idx === 1) {
-            const polygon1 = selLayers[0]?.toGeoJSON(9);
-            const polygon2 = selLayers[1]?.toGeoJSON(9);
-            const p1Normalized = normalizeGeoJSONCoordinates(polygon1.features[0], 9);
-            const p2Normalized = normalizeGeoJSONCoordinates(polygon2.features[0], 9);
+            const polygon1 = selLayers[0]?.toGeoJSON();
+            const polygon2 = selLayers[1]?.toGeoJSON();
+            const p1Normalized = normalizeGeoJSONCoordinates(polygon1.features[0]);
+            const p2Normalized = normalizeGeoJSONCoordinates(polygon2.features[0]);
             unionGeom = union(featureCollection([p1Normalized, p2Normalized]));
         }
         if (idx > 1) {
-            const polygon = layer?.toGeoJSON(9);
-            const befNormalized = normalizeGeoJSONCoordinates(unionGeom, 9);
-            const pNormalized = normalizeGeoJSONCoordinates(polygon.features[0], 9);
+            const polygon = layer?.toGeoJSON();
+            const befNormalized = normalizeGeoJSONCoordinates(unionGeom);
+            const pNormalized = normalizeGeoJSONCoordinates(polygon.features[0]);
             unionGeom = union(featureCollection([befNormalized, pNormalized]));
         }
     });
@@ -99,7 +100,7 @@ export function reshapeSelectedLayersByLine(
     const results: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon | GeoJSON.LineString>[] = [];
     selLayers.forEach((layer: L.GeoJSON) => {
 
-        const geojsonFeatureInfo = layer.toGeoJSON(9) as GeoJSON.FeatureCollection<any> | GeoJSON.Feature<any>;
+        const geojsonFeatureInfo = layer.toGeoJSON() as GeoJSON.FeatureCollection<any> | GeoJSON.Feature<any>;
         /*  排查了一下：
             若是先选择再进行重塑时，选择的图层高亮黄色，其geojsonFeatureInfo.type为'FeatureCollection'
             若是无选择重塑，geojsonFeatureInfo.type为'Feature'
