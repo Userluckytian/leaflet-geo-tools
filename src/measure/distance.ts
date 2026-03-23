@@ -7,6 +7,7 @@ import { distance, type Units } from '@turf/turf';
 import * as L from 'leaflet';
 import { PolygonEditorState } from '../types';
 export type distanceOptions = {
+    coordPrecision?: number; // 坐标点精度
     units?: Units;
     precision?: number;
     lang?: 'en' | 'zh';
@@ -30,6 +31,7 @@ export default class LeafletDistance {
     private tempCoords: number[][] = [];
     private markerArr: L.Marker[] = []; // 用于存放临时生成的marker弹窗
     private measureOptions: distanceOptions = {
+        coordPrecision: 6,
         units: 'meters',
         precision: 2,
         lang: 'zh',
@@ -195,9 +197,9 @@ export default class LeafletDistance {
      * 担心用户在绘制后，想要获取到点位的经纬度信息，遂提供吐出geojson的方法
      * @memberof LeafletDistance
      */
-    public geojson() {
+    public geojson(precision?: number | false) {
         if (this.lineLayer) {
-            return this.lineLayer.toGeoJSON();
+            return this.lineLayer.toGeoJSON(precision || this.measureOptions.coordPrecision || 6);
         } else {
             throw new Error("未捕获到图层，无法获取到geojson数据");
         }
@@ -334,7 +336,7 @@ export default class LeafletDistance {
      * @returns 格式化后的距离对象
      */
     private formatDistance(value: number, options: distanceOptions): FormattedDistance {
-        const { lang = 'zh', precision = 2, units='meters' } = options;
+        const { lang = 'zh', precision = 2, units = 'meters' } = options;
 
         // 先统一处理同义词
         const normalizedUnit = this.normalizeUnit(units);

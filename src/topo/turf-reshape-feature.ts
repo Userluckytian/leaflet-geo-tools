@@ -43,7 +43,7 @@ import type { ReshapeOptions } from "../types";
 function reshapeMultiPolygonByLine(
   multi: GeoJSON.Feature<GeoJSON.MultiPolygon>,
   sketchLine: GeoJSON.Feature<GeoJSON.LineString>,
-  options: ReshapeOptions = { chooseStrategy: 'auto', AllowReshapingWithoutSelection: false }
+  options: ReshapeOptions = { chooseStrategy: 'auto', AllowReshapingWithoutSelection: false },
 ): GeoJSON.Feature<GeoJSON.MultiPolygon>[] {
   const parts = getCoords(multi).map(rings => turfPolygon(rings));
   const reshaped: GeoJSON.Feature<GeoJSON.Polygon>[] = [];
@@ -175,7 +175,7 @@ function pickLargestPerimeterPolygon(
 function reshapeLineByLine(
   target: GeoJSON.Feature<GeoJSON.LineString>,
   sketch: GeoJSON.Feature<GeoJSON.LineString>,
-  options: ReshapeOptions = { chooseStrategy: 'auto', AllowReshapingWithoutSelection: false }
+  options: ReshapeOptions = { chooseStrategy: 'auto', AllowReshapingWithoutSelection: false },
 ): GeoJSON.Feature<GeoJSON.LineString>[] | null {
   const intersections = lineIntersect(target, sketch).features;
   if (intersections.length === 0) return null;
@@ -224,10 +224,10 @@ function replaceSegmentBetween(
   targetCoords: number[][],
   i1: GeoJSON.Feature<GeoJSON.Point>,
   i2: GeoJSON.Feature<GeoJSON.Point>,
-  sketch: GeoJSON.Feature<GeoJSON.LineString>
+  sketch: GeoJSON.Feature<GeoJSON.LineString>,
 ): number[][] | null {
-  const p1 = roundCoord(i1.geometry.coordinates);
-  const p2 = roundCoord(i2.geometry.coordinates);
+  const p1 = i1.geometry.coordinates;
+  const p2 = i2.geometry.coordinates;
 
   const [before, rest] = splitLineAtPoint(targetCoords, p1); // 获取前半段
 
@@ -308,18 +308,6 @@ function extractSketchBetweenWithInsertion(
   return mergeSegments(selected);
 }
 
-
-/** 
- * 将坐标数组四舍五入到指定位数
- *
- *
- * @param {number[]} coord
- * @param {number} [precision=6]
- * @return {*}  {number[]}
- */
-function roundCoord(coord: number[], precision = 6): number[] {
-  return coord.map(n => Number(n.toFixed(precision)));
-}
 
 /**
  * 合并多个 LineString 段为一个连续坐标数组

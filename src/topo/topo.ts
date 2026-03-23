@@ -2,7 +2,7 @@ import * as L from 'leaflet';
 import { queryLayerOnClick, queryLayersIntersectingGeometry } from '../utils/commonUtils';
 import { clipSelectedLayersByLine, mergePolygon, reshapeSelectedLayersByLine } from '../utils/topoUtils';
 import PolylineEditor from '../editor/polylineEditor';
-import { EditorState, ReshapeOptions, TopoClipResult, TopoMergeResult, TopoReshapeFeatureResult } from '../types';
+import { EditorState, ReshapeOptions, TopoClipResult, TopoMergeResult, TopoOptions, TopoReshapeFeatureResult } from '../types';
 
 export class LeafletTopology {
   private static instance: LeafletTopology;
@@ -12,9 +12,13 @@ export class LeafletTopology {
   private clickHandler: ((e: L.LeafletMouseEvent) => void) | null = null;
   private drawLineListener: ((status: EditorState) => void) | null = null;
   private isPicking: boolean = false; // 是否处于选择图层状态（这个状态主要用于edit编辑器在编辑时，确保当前不是选择图层的状态，如果是选择图层的状态，则editor编辑器的事件应该禁止，不让其触发）
+  private topoOptions: TopoOptions = {
+    precision: 6,
+  }
 
-  constructor(map: L.Map) {
+  constructor(map: L.Map, options: TopoOptions = {}) {
     this.map = map;
+    this.topoOptions = { ...this.topoOptions, ...options };
   }
 
   public static getInstance(map: L.Map): LeafletTopology {
@@ -22,6 +26,14 @@ export class LeafletTopology {
       LeafletTopology.instance = new LeafletTopology(map);
     }
     return LeafletTopology.instance;
+  }
+
+  public getTopoOptions() {
+    return this.topoOptions;
+  }
+
+  public setTopoOptions(options: TopoOptions) {
+    return { ...this.topoOptions, ...options };
   }
 
   /** 选择图层
@@ -39,7 +51,7 @@ export class LeafletTopology {
     this.disableMapOpt();
 
     this.clickHandler = (e: L.LeafletMouseEvent) => {
-      const hits = queryLayerOnClick(this.map!, e);
+      const hits = queryLayerOnClick(this.map!, e, this.topoOptions.precision);
       // console.log('这里返回的是全部被选择的图层，其中我们高亮的图层携带有属性： options.linkLayerId，所以我们可以判断出，这是一个高亮图层，从而跳过处理', hits);
       /* 过滤条件1： layer的options属性中若包含linkLayerId属性，说明是topo的高亮图层，需要过滤掉
          过滤条件2： layer的options属性中layerVisible属性的值是false，说明是隐藏的图层，需要过滤掉
@@ -76,7 +88,7 @@ export class LeafletTopology {
       throw new Error('请至少选择两个图层进行合并');
     }
     try {
-      const mergedGeom = mergePolygon(this.selectedLayers);
+      const mergedGeom = mergePolygon(this.selectedLayers, this.topoOptions.precision);
       // console.log('合并--mergedGeom', mergedGeom);
       // return { mergedGeom, mergedLayers: this.selectedLayers };
       // console.log('合并--mergedGeom', mergedGeom);
@@ -112,17 +124,17 @@ export class LeafletTopology {
     // 添加绘制完毕后，重新调整状态为topo状态
     this.drawLineListener = (status: EditorState) => {
       if (status === EditorState.Idle) {
-        const geoJson = this.drawLineLayer!.getGeoJSON();
+        const geoJson = this.drawLineLayer!.getGeoJSON(this.topoOptions.precision);
         // console.log('绘制的线图层的空间信息：', this.drawLineLayer, geoJson);
         // console.log('用户选择的图层：', this.selectedLayers);
         // console.log('地图对象', this.map);
         if (options.AllowReshapingWithoutSelection) {
-          const tempIntersectLayer = queryLayersIntersectingGeometry(this.map!, geoJson);
+          const tempIntersectLayer = queryLayersIntersectingGeometry(this.map!, geoJson, this.topoOptions.precision);
           this.selectedLayers = tempIntersectLayer.filter((it: L.Layer) => (it.options as any).drawFlag !== drawReshapeLineFlag);
         }
         // console.log('final-this.selectedLayers', this.selectedLayers);
 
-        const { doReshapeLayers, reshapedGeoms } = reshapeSelectedLayersByLine(geoJson, this.selectedLayers, options);
+        const { doReshapeLayers, reshapedGeoms } = reshapeSelectedLayersByLine(geoJson, this.selectedLayers, options, this.topoOptions.precision);
         // 行为1：正常输出
         // console.log('reshapedGeoms', reshapedGeoms, 'doReshapeLayers', doReshapeLayers);
         setTimeout(() => {
@@ -131,6 +143,7 @@ export class LeafletTopology {
         }, 0);
         callback && callback({ doReshapeLayers, reshapedGeoms });
 
+        // 为啥不删掉？ 后续调试用
         // 行为2：上图渲染，但不输出，主要用于测试
         // clipsPolygons.forEach(element => {
         //   const layer = L.geoJSON(element, {
@@ -174,9 +187,9 @@ export class LeafletTopology {
     // 添加绘制完毕后，重新调整状态为topo状态
     this.drawLineListener = (status: EditorState) => {
       if (status === EditorState.Idle) {
-        const geoJson = this.drawLineLayer!.getGeoJSON();
+        const geoJson = this.drawLineLayer!.getGeoJSON(this.topoOptions.precision);
         // console.log('绘制的线图层的空间信息：', geoJson, this.selectedLayers);
-        const { doClipLayers, clipedGeoms } = clipSelectedLayersByLine(geoJson, this.selectedLayers);
+        const { doClipLayers, clipedGeoms } = clipSelectedLayersByLine(geoJson, this.selectedLayers, this.topoOptions.precision);
         // console.log('clipsPolygons', clipedGeoms, 'waitingDelLayer', doClipLayers);
         setTimeout(() => {
           if (this.drawLineLayer) {
@@ -216,7 +229,7 @@ export class LeafletTopology {
    * @memberof LeafletTopology
    */
   private addHighLightLayerByPickLayerGeom(layer: any) {
-    const layerGeom = layer.toGeoJSON();
+    const layerGeom = layer.toGeoJSON(this.topoOptions.precision);
     // 暂时不支持点类型的
     if (layerGeom.geometry.type === 'Point') {
       throw new Error('不支持的数据类型：' + layerGeom.geometry.type + '，不支持高亮');
@@ -255,7 +268,7 @@ export class LeafletTopology {
    * */
   public cleanAll() {
     if (this.clickHandler) {
-     this.map && this.map.off('click', this.clickHandler);
+      this.map && this.map.off('click', this.clickHandler);
       this.clickHandler = null;
     }
     this.map && (this.map.getContainer().style.cursor = 'default');

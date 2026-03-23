@@ -10,7 +10,9 @@ export abstract class BaseEditor<T extends L.Layer> {
 
     protected map: L.Map; // 地图实例（编辑器本身是不需要的，奈何其他的都继承自它，索性直接在这里定义好了）
 
-    protected options: LeafletEditorOptions = {}; // 配置信息
+    protected options: LeafletEditorOptions = {
+        coordPrecision: 6
+    }; // 配置信息
 
     protected layer: T | null = null; // 图层实例（编辑器本身是不需要的，奈何其他的都继承自它，索性直接在这里定义好了）
 
@@ -300,7 +302,7 @@ export abstract class BaseEditor<T extends L.Layer> {
 
         map.eachLayer((layer: any) => {
             if (layer !== excludeLayer && layer.toGeoJSON) {
-                const geo = layer.toGeoJSON();
+                const geo = layer.toGeoJSON(this.options.coordPrecision);
                 const geometry = geo.type === 'Feature' ? geo.geometry : geo;
                 try {
                     const index = this.buildGeometryIndex(geometry);
@@ -1005,7 +1007,7 @@ export abstract class BaseEditor<T extends L.Layer> {
             // topo正在选择图层，不处理双击编辑事件
             return false;
         }
-        const clickIsSelf = isClickOnLayer(e, this.layer as any);
+        const clickIsSelf = isClickOnLayer(e, this.layer as any, this.options.coordPrecision);
         // 已经激活的实例，确保点击在自己的图层上
         if (this.isActive()) {
             return clickIsSelf;
@@ -1026,7 +1028,7 @@ export abstract class BaseEditor<T extends L.Layer> {
         if (!map) throw new Error('传入的地图对象异常，请先确保地图对象已实例完成。');
         // 对于编辑器来说，我是否应该考虑精度问题？我觉得应该考虑，因为无论是吸附、还是topo，都会涉及到精度问题，所以我觉得在编辑器基类中，应该把这个精度问题的配置项做好，后续其他编辑器继承了这个基类，就可以直接使用这个精度配置项了。
         this.map = map;
-        this.options = options;
+        this.options = Object.assign(this.options, options);
         if (this.map) {
             // 1、编辑器是否启用吸附功能(初始化吸附控制器，设置吸附模式、吸附范围阈值、吸附高亮配置等)
             if (options?.snap?.enabled) {

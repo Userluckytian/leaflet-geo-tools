@@ -1,4 +1,4 @@
-import { flattenEach, union, featureCollection } from "@turf/turf";
+import { flattenEach, union, featureCollection, booleanPointOnLine, lineString } from "@turf/turf";
 import splitPolygon from "../topo/turf-polygon-split";
 import { reshapeLineByLine, reshapePolygonByLine, reshapeMultiPolygonByLine } from "../topo/turf-reshape-feature";
 import { TopoClipResult, ReshapeOptions, TopoReshapeFeatureResult } from "../types";
@@ -12,14 +12,15 @@ import { TopoClipResult, ReshapeOptions, TopoReshapeFeatureResult } from "../typ
  */
 export function clipSelectedLayersByLine(
     lineFeature: GeoJSON.Feature<any>,
-    selLayers: L.GeoJSON[]
+    selLayers: L.GeoJSON[],
+    precision?: number | false
 ): TopoClipResult {
 
     const waitingDelLayer: L.Layer[] = [];
     const clipsPolygons: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>[] = [];
 
     selLayers.forEach((layer: L.GeoJSON) => {
-        const geoData = layer.toGeoJSON();
+        const geoData = layer.toGeoJSON(precision);
         let layerHasResult = false;
 
         // 使用Turf的遍历方法来处理所有几何体
@@ -61,19 +62,19 @@ export function clipSelectedLayersByLine(
  * 
  * @param selLayers 
  */
-export function mergePolygon(selLayers: any): GeoJSON.Feature | null {
+export function mergePolygon(selLayers: any, precision?: number | false): GeoJSON.Feature | null {
     let unionGeom: GeoJSON.Feature | null = null; // 合并后的新的图层信息也传入了
     selLayers.forEach((layer: any, idx: number) => {
         // 这块的逻辑就是：遍历到第一个面时，由于只有一个面，所以没法做合并操作，必须是遍历到第二个面才开始操作。
         if (idx === 1) {
-            const polygon1 = selLayers[0]?.toGeoJSON();
-            const polygon2 = selLayers[1]?.toGeoJSON();
+            const polygon1 = selLayers[0]?.toGeoJSON(precision);
+            const polygon2 = selLayers[1]?.toGeoJSON(precision);
             const p1Normalized = normalizeGeoJSONCoordinates(polygon1.features[0]);
             const p2Normalized = normalizeGeoJSONCoordinates(polygon2.features[0]);
             unionGeom = union(featureCollection([p1Normalized, p2Normalized]));
         }
         if (idx > 1) {
-            const polygon = layer?.toGeoJSON();
+            const polygon = layer?.toGeoJSON(precision);
             const befNormalized = normalizeGeoJSONCoordinates(unionGeom);
             const pNormalized = normalizeGeoJSONCoordinates(polygon.features[0]);
             unionGeom = union(featureCollection([befNormalized, pNormalized]));
@@ -94,13 +95,14 @@ export function mergePolygon(selLayers: any): GeoJSON.Feature | null {
 export function reshapeSelectedLayersByLine(
     sketchLine: GeoJSON.Feature<any>,
     selLayers: L.GeoJSON[],
-    options: ReshapeOptions = { chooseStrategy: 'auto', AllowReshapingWithoutSelection: false }
+    options: ReshapeOptions = { chooseStrategy: 'auto', AllowReshapingWithoutSelection: false },
+    precision?: number | false
 ): TopoReshapeFeatureResult {
     const waitingDelLayer: L.Layer[] = [];
     const results: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon | GeoJSON.LineString>[] = [];
     selLayers.forEach((layer: L.GeoJSON) => {
 
-        const geojsonFeatureInfo = layer.toGeoJSON() as GeoJSON.FeatureCollection<any> | GeoJSON.Feature<any>;
+        const geojsonFeatureInfo = layer.toGeoJSON(precision) as GeoJSON.FeatureCollection<any> | GeoJSON.Feature<any>;
         /*  排查了一下：
             若是先选择再进行重塑时，选择的图层高亮黄色，其geojsonFeatureInfo.type为'FeatureCollection'
             若是无选择重塑，geojsonFeatureInfo.type为'Feature'
@@ -194,4 +196,35 @@ function normalizeGeoJSONCoordinates(geojson: any, precision = 6): any {
     } else {
         return geojson; // 其他类型暂不处理
     }
+}
+
+/**
+ * 判断点是否在线上（支持 LineString 和 MultiLineString）
+ * @param pointGeoJSON 点 GeoJSON
+ * @param lineGeoJSON 线 GeoJSON（LineString 或 MultiLineString）
+ * @returns 是否在线上
+ */
+export function isPointOnLine(pointGeoJSON: any, lineGeoJSON: any): boolean {
+    const geometryType = lineGeoJSON.geometry.type;
+    
+    if (geometryType === 'LineString') {
+        const turfLine = lineString(lineGeoJSON.geometry.coordinates);
+        return booleanPointOnLine(pointGeoJSON, turfLine);
+    }
+    
+    if (geometryType === 'MultiLineString') {
+        const multiLines = lineGeoJSON.geometry.coordinates;
+        
+        // 遍历每条线
+        for (const lineCoords of multiLines) {
+            const turfLine = lineString(lineCoords);
+            if (booleanPointOnLine(pointGeoJSON, turfLine)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    console.warn('不支持的几何类型:', geometryType);
+    return false;
 }

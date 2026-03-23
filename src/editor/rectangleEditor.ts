@@ -368,7 +368,7 @@ export default class RectangleEditor extends BaseEditor<L.Rectangle> {
         if (!this.canConsume(e)) return;
         if (!this.layer) throw new Error('图层实例化失败，无法完成图层创建，请重试');
         const clickedLatLng = e.latlng;
-        const polygonGeoJSON = this.layer.toGeoJSON();
+        const polygonGeoJSON = this.layer.toGeoJSON(this.options.coordPrecision);
         // 判断用户是否点击到了面上，是的话，就开始编辑模式
         const turfPoint = point([clickedLatLng.lng, clickedLatLng.lat]);
         const isInside = booleanPointInPolygon(turfPoint, polygonGeoJSON);
