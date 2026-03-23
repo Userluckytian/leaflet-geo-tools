@@ -1,10 +1,4 @@
-import type CircleEditor from "./editor/circleEditor";
-import type MarkerPointEditor from "./editor/markerPointEditor";
-import type PolygonEditor  from "./editor/polygonEditor";
-import type PolylineEditor from "./editor/polylineEditor";
-import type RectangleEditor from "./editor/rectangleEditor";
-import type LeafletArea from "./measure/area";
-import type LeafletDistance from "./measure/distance";
+// 使用字符串字面量类型避免循环依赖
 
 /* 编辑器状态 */
 export enum EditorState {
@@ -109,9 +103,9 @@ export interface GeometryIndex {
 
 
 
-/* 类型实例类型 */
-export type drawInstance = CircleEditor | MarkerPointEditor | PolygonEditor | PolylineEditor | RectangleEditor;
-export type measureInstance = LeafletArea | LeafletDistance;
+/* 类型实例类型 - 使用 any 类型避免循环依赖 */
+export type drawInstance = any; // CircleEditor | MarkerPointEditor | PolygonEditor | PolylineEditor | RectangleEditor;
+export type measureInstance = any; // LeafletArea | LeafletDistance;
 export type EditorInstance = drawInstance | measureInstance;
 
 
