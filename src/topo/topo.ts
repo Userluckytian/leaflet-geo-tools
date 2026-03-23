@@ -1,16 +1,16 @@
 import * as L from 'leaflet';
 import { queryLayerOnClick, queryLayersIntersectingGeometry } from '../utils/commonUtils';
-import LeafletPolyline from '../draw/polyline';
-import { PolygonEditorState, type ReshapeOptions, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult } from '../types';
 import { clipSelectedLayersByLine, mergePolygon, reshapeSelectedLayersByLine } from '../utils/topoUtils';
+import PolylineEditor from '../editor/polylineEditor';
+import { EditorState, ReshapeOptions, TopoClipResult, TopoMergeResult, TopoReshapeFeatureResult } from '../types';
 
 export class LeafletTopology {
   private static instance: LeafletTopology;
   private map: L.Map | null = null;
-  drawLineLayer: LeafletPolyline | null = null;
+  drawLineLayer: PolylineEditor | null = null;
   private selectedLayers: L.GeoJSON[] = [];
   private clickHandler: ((e: L.LeafletMouseEvent) => void) | null = null;
-  private drawLineListener: ((status: PolygonEditorState) => void) | null = null;
+  private drawLineListener: ((status: EditorState) => void) | null = null;
   private isPicking: boolean = false; // 是否处于选择图层状态（这个状态主要用于edit编辑器在编辑时，确保当前不是选择图层的状态，如果是选择图层的状态，则editor编辑器的事件应该禁止，不让其触发）
 
   constructor(map: L.Map) {
@@ -108,11 +108,11 @@ export class LeafletTopology {
     }
     // 第二步： 执行绘制操作，并添加监听事件
     const drawReshapeLineFlag = 'reshapeLine';
-    this.drawLineLayer = new LeafletPolyline(this.map, { defaultStyle: { drawFlag: drawReshapeLineFlag } });
+    this.drawLineLayer = new PolylineEditor(this.map, { defaultStyle: { drawFlag: drawReshapeLineFlag } });
     // 添加绘制完毕后，重新调整状态为topo状态
-    this.drawLineListener = (status: PolygonEditorState) => {
-      if (status === PolygonEditorState.Idle) {
-        const geoJson = this.drawLineLayer!.geojson(9);
+    this.drawLineListener = (status: EditorState) => {
+      if (status === EditorState.Idle) {
+        const geoJson = this.drawLineLayer!.getGeoJSON();
         // console.log('绘制的线图层的空间信息：', this.drawLineLayer, geoJson);
         // console.log('用户选择的图层：', this.selectedLayers);
         // console.log('地图对象', this.map);
@@ -170,11 +170,11 @@ export class LeafletTopology {
       this.clickHandler = null;
     }
     // 第二步： 执行绘制操作，并添加监听事件
-    this.drawLineLayer = new LeafletPolyline(this.map);
+    this.drawLineLayer = new PolylineEditor(this.map);
     // 添加绘制完毕后，重新调整状态为topo状态
-    this.drawLineListener = (status: PolygonEditorState) => {
-      if (status === PolygonEditorState.Idle) {
-        const geoJson = this.drawLineLayer!.geojson(9);
+    this.drawLineListener = (status: EditorState) => {
+      if (status === EditorState.Idle) {
+        const geoJson = this.drawLineLayer!.getGeoJSON();
         // console.log('绘制的线图层的空间信息：', geoJson, this.selectedLayers);
         const { doClipLayers, clipedGeoms } = clipSelectedLayersByLine(geoJson, this.selectedLayers);
         // console.log('clipsPolygons', clipedGeoms, 'waitingDelLayer', doClipLayers);
@@ -216,7 +216,7 @@ export class LeafletTopology {
    * @memberof LeafletTopology
    */
   private addHighLightLayerByPickLayerGeom(layer: any) {
-    const layerGeom = layer.toGeoJSON(9);
+    const layerGeom = layer.toGeoJSON();
     // 暂时不支持点类型的
     if (layerGeom.geometry.type === 'Point') {
       throw new Error('不支持的数据类型：' + layerGeom.geometry.type + '，不支持高亮');
