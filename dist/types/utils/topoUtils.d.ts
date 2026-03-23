@@ -1,4 +1,4 @@
-import type { ReshapeOptions, TopoClipResult, TopoReshapeFeatureResult } from "../types";
+import { TopoClipResult, ReshapeOptions, TopoReshapeFeatureResult } from "../types";
 /** 保存裁剪后的图层
  *
  * @param {Feature<any>} lineFeature 绘制的线Feature

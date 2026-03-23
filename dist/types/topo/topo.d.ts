@@ -1,10 +1,10 @@
 import * as L from 'leaflet';
-import LeafletPolyline from '../draw/polyline';
-import { type ReshapeOptions, type TopoClipResult, type TopoMergeResult, type TopoReshapeFeatureResult } from '../types';
+import PolylineEditor from '../editor/polylineEditor';
+import { ReshapeOptions, TopoClipResult, TopoMergeResult, TopoReshapeFeatureResult } from '../types';
 export declare class LeafletTopology {
     private static instance;
     private map;
-    drawLineLayer: LeafletPolyline | null;
+    drawLineLayer: PolylineEditor | null;
     private selectedLayers;
     private clickHandler;
     private drawLineListener;

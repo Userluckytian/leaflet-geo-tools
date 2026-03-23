@@ -1,14 +1,30 @@
-import type LeafletCircle from "./draw/circle";
-import type MarkerPoint from "./draw/markerPoint";
-import type LeafletPolygon from "./draw/polygon";
-import type LeafletPolyline from "./draw/polyline";
-import type LeafletRectangle from "./draw/rectangle";
-import type LeafletEditPolygon from "./simpleEdit/polygon";
-import type LeafletEditRectangle from "./simpleEdit/rectangle";
-import type LeafletArea from "./measure/area";
-import type LeafletDistance from "./measure/distance";
-import type LeafletRectangleEditor from "./edit/rectangle";
-import type LeafletPolygonEditor from "./edit/polygon";
+export declare enum EditorState {
+    Idle = "idle",// 空闲状态：既不是绘制中，也不是编辑中
+    Drawing = "drawing",// 正在绘制
+    Editing = "editing"
+}
+export interface EditorListenerConfigs {
+    immediateNotify?: boolean;
+}
+export interface BaseEditOptions {
+    enabled: boolean;
+    vertexsMarkerStyle?: L.MarkerOptions;
+}
+export interface LeafletPolylineOptions extends L.PolylineOptions {
+    origin?: any;
+    [key: string]: unknown;
+}
+export interface LeafletMarkerOptions extends L.MarkerOptions {
+    origin?: any;
+    [key: string]: unknown;
+}
+export interface LeafletEditorOptions {
+    defaultGeometry?: GeoJSON.Geometry;
+    defaultStyle?: LeafletPolylineOptions | LeafletMarkerOptions;
+    snap?: SnapOptions;
+    edit?: EditOptionsExpends;
+    validation?: ValidationOptions;
+}
 export type SnapMode = 'vertex' | 'edge';
 export type SnapOptions = {
     enabled: boolean;
@@ -28,15 +44,62 @@ export interface BaseEditOptions {
 export interface EditOptionsExpends extends BaseEditOptions {
     dragLineMarkerOptions?: DragMarkerOptions;
     dragMidMarkerOptions?: DragMarkerOptions;
+    circleLinkRadiusAndCenterDashLineOptions?: CircleDashLineOptions;
 }
 export type ValidationOptions = {
     allowSelfIntersect?: boolean;
+    validErrorPolygonStyle?: L.PolylineOptions;
+    validErrorLineStyle?: L.PolylineOptions;
+    validErrorPointStyle?: L.MarkerOptions;
 };
 export type DragMarkerOptions = {
     enabled: boolean;
-    dragMarkerStyle?: L.MarkerOptions;
-    positionRatio?: number;
+    dragMarkerStyle: L.MarkerOptions;
+    positionRatio: number;
 };
+export type CircleDashLineOptions = {
+    enabled: boolean;
+    dashLineStyle: L.PolylineOptions;
+};
+export interface SnapResult {
+    snappedLatLng: L.LatLng;
+    snapped: boolean;
+    type?: 'vertex' | 'edge';
+    target?: L.LatLng | {
+        start: L.LatLng;
+        end: L.LatLng;
+    } | undefined | null;
+}
+export interface GeometryIndex {
+    type: 'polygon' | 'polyline';
+    vertices: L.LatLng[];
+    edges: {
+        start: L.LatLng;
+        end: L.LatLng;
+    }[];
+    bounds: L.LatLngBounds;
+    geometry: GeoJSON.Geometry;
+}
+export type drawInstance = any;
+export type measureInstance = any;
+export type EditorInstance = drawInstance | measureInstance;
+export type MidpointPair = {
+    insert: L.Marker | null;
+    edge: L.Marker | null;
+};
+export interface SnapHighlightLayerOptions {
+    enabled?: boolean;
+    pointStyle?: L.CircleMarkerOptions;
+    edgeStyle?: L.PolylineOptions;
+}
+export interface BaseEditOptions {
+    enabled: boolean;
+    vertexsMarkerStyle?: L.MarkerOptions;
+}
+export interface EditOptionsExpends extends BaseEditOptions {
+    dragLineMarkerOptions?: DragMarkerOptions;
+    dragMidMarkerOptions?: DragMarkerOptions;
+}
 export interface SnapResult {
     snappedLatLng: L.LatLng;
     snapped: boolean;
@@ -64,24 +127,12 @@ export declare enum PolygonEditorState {
 export interface EditorListenerConfigs {
     immediateNotify?: boolean;
 }
-export type drawInstance = LeafletCircle | MarkerPoint | LeafletPolygon | LeafletPolyline | LeafletRectangle;
-export type measureInstance = LeafletArea | LeafletDistance;
-export type editorInstance = LeafletEditPolygon | LeafletEditRectangle | LeafletRectangleEditor | LeafletPolygonEditor;
-export type leafletGeoEditorInstance = drawInstance | measureInstance | editorInstance;
-export type MidpointPair = {
-    insert: L.Marker | null;
-    edge: L.Marker | null;
-};
 export interface LeafletToolsOptions {
     defaultStyle?: LeafletPolylineOptions;
     snap?: SnapOptions;
     edit?: EditOptionsExpends;
     validation?: ValidationOptions;
     validErrorPolygonStyle?: L.PolylineOptions;
-}
-export interface LeafletPolylineOptions extends L.PolylineOptions {
-    origin?: any;
-    [key: string]: unknown;
 }
 export interface TopoMergeResult {
     mergedLayers: L.GeoJSON[];

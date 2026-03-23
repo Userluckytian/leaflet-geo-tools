@@ -26,3 +26,70 @@ export declare function queryLayersIntersectingGeometry(map: L.Map, geometry: Ge
  * @memberof LeafletEditPolygon
  */
 export declare function buildMarkerIcon(iconStyle?: string, iconSize?: number[], options?: L.DivIconOptions): L.DivIcon;
+/**
+ * 简单坐标去重 - 剔除连续重复坐标
+ * @param {Array} coordinates - 坐标数组 [[lat, lng], [lat, lng], ...]
+ * @param {number} precision - 精度（小数位数），默认6位
+ * @returns {Array} 去重后的坐标数组
+ */
+export declare function deduplicateCoordinates(coordinates: string | any[]): any[];
+/**
+ * 获取边上某个比例位置的点（例如 1/3、2/3）
+ * @param p1 起点
+ * @param p2 终点
+ * @param ratio 比例（0~1），例如 1/3 = 0.333
+ * @returns L.LatLng
+ */
+export declare function getFractionalPointOnEdge(p1: L.LatLng, p2: L.LatLng, ratio: number): L.LatLng;
+/** 转换经纬度为Leaflet可接受的格式(简言之,从[经度, 纬度],变成[纬度, 经度])
+ *
+ *
+ * @private
+ * @param {GeoJSON.Geometry} geometry
+ * @return {*}  {(L.LatLngExpression[][] | L.LatLngExpression[][][])}
+ * @memberof LeafletPolygonEditor
+ */
+export declare function reverseLatLngs(geometry: GeoJSON.Geometry): L.LatLngExpression[][] | L.LatLngExpression[][][];
+/** 转换【矩形】的geojson-经纬度坐标
+ *
+ *
+ * @private
+ * @param {GeoJSON.Geometry} geometry
+ * @return {*}  {L.LatLngBoundsExpression}
+ * @memberof LeafletRectangleEditor
+ */
+export declare function reverseRectLatLngs(geometry: GeoJSON.Geometry): L.LatLngBoundsExpression;
+/** 转换【点】的经纬度坐标
+ *
+ *
+ * @private
+ * @param {GeoJSON.Geometry} geometry
+ * @return {*}  {L.LatLngBoundsExpression}
+ * @memberof LeafletRectangleEditor
+ */
+export declare function reversePointLatLngs(geometry: GeoJSON.Geometry): number[];
+/** 转换【线】的经纬度坐标,并强制按照多线的结构返回。
+ *
+ *
+ * @private
+ * @param {GeoJSON.Geometry} geometry
+ * @return {*}  {L.LatLngBoundsExpression}
+ * @memberof LeafletRectangleEditor
+ */
+export declare function reversePolyLineLatLngs(geometry: GeoJSON.Geometry): number[][][];
+/**  判断点击事件是否点击到layer身上
+     *
+     *
+     *
+     * @private
+     * @param {L.LeafletMouseEvent} e
+     * @return {*}  {boolean}
+     * @memberof LeafletEditRectangle
+     */
+export declare function isClickOnLayer(e: L.LeafletMouseEvent, layer: L.Polygon | L.Rectangle | L.Circle | L.Polyline): boolean;
+/** turf的校验有效性，同时增强，因为要同步进行坐标的范围进行校验
+ *
+ * @param geom
+ * @returns
+ */
+export declare function booleanValidEnhance(geom: any): boolean;
