@@ -5,7 +5,7 @@
  * */
 import { area, center, kinks, polygon } from '@turf/turf';
 import * as L from 'leaflet';
-import { PolygonEditorState, type ValidationOptions } from '../types';
+import { EditorState, type ValidationOptions } from '../types';
 
 export type areaOptions = {
     coordPrecision?: number; // 坐标精度
@@ -79,9 +79,9 @@ export default class LeafletArea {
     }
 
     // 1：我们需要记录当前状态是处于绘制状态--见：currentState变量
-    private currentState: PolygonEditorState = PolygonEditorState.Idle; // 默认空闲状态
+    private currentState: EditorState = EditorState.Idle; // 默认空闲状态
     // 2：我们需要一个数组，存储全部的监听事件，然后在状态改变时，触发所有这些事件的监听回调！
-    private stateListeners: ((state: PolygonEditorState) => void)[] = [];
+    private stateListeners: ((state: EditorState) => void)[] = [];
 
     // 添加校验配置
     private validationOptions: ValidationOptions = {
@@ -98,7 +98,7 @@ export default class LeafletArea {
         };
         if (this.map) {
             // 初始化时，设置绘制状态为true，且发出状态通知
-            this.updateAndNotifyStateChange(PolygonEditorState.Drawing);
+            this.updateAndNotifyStateChange(EditorState.Drawing);
             // 鼠标手势设置为十字
             this.map.getContainer().style.cursor = 'crosshair';
             // 禁用双击地图放大功能（先考虑让用户自己去写，里面不再控制）
@@ -194,7 +194,7 @@ export default class LeafletArea {
         // 恢复双击地图放大事件（先考虑让用户自己去写，里面不再控制）
         // this.map.doubleClickZoom.enable();
         // 初始化时，设置绘制状态为true，且发出状态通知
-        this.updateAndNotifyStateChange(PolygonEditorState.Idle);
+        this.updateAndNotifyStateChange(EditorState.Idle);
     }
     /**  地图鼠标移动事件，用于设置点的位置
      *
@@ -407,10 +407,10 @@ export default class LeafletArea {
     /** 【外部使用】的监听器，用于监听状态改变事件
      *
      *
-     * @param {(state: PolygonEditorState) => void} listener
+     * @param {(state: EditorState) => void} listener
      * @memberof LeafletArea
      */
-    public onStateChange(listener: (state: PolygonEditorState) => void): void {
+    public onStateChange(listener: (state: EditorState) => void): void {
         // 存储回调事件并立刻触发一次
         this.stateListeners.push(listener);
         // 立即回调当前状态
@@ -420,7 +420,7 @@ export default class LeafletArea {
     /** 添加移除单个监听器的方法 
      * 
      */
-    public offStateChange(listener: (state: PolygonEditorState) => void): void {
+    public offStateChange(listener: (state: EditorState) => void): void {
         const index = this.stateListeners.indexOf(listener);
         if (index > -1) {
             this.stateListeners.splice(index, 1);
@@ -440,7 +440,7 @@ export default class LeafletArea {
      * @private
      * @memberof LeafletArea
      */
-    private updateAndNotifyStateChange(status: PolygonEditorState): void {
+    private updateAndNotifyStateChange(status: EditorState): void {
         this.currentState = status;
         this.stateListeners.forEach(fn => fn(this.currentState));
     }
