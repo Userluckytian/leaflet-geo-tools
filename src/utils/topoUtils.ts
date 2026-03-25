@@ -119,22 +119,24 @@ export function reshapeSelectedLayersByLine(
         switch (type) {
             case 'LineString':
                 const lineResult = reshapeLineByLine(geojson as GeoJSON.Feature<GeoJSON.LineString>, sketchLine, options);
-                // console.log('lineResult', lineResult);
-
-                if (lineResult)
+                if (lineResult){
                     results.push(...lineResult);
+                    waitingDelLayer.push(layer);
+                }
                 break;
             case 'Polygon':
                 const polyResult = reshapePolygonByLine(geojson as GeoJSON.Feature<GeoJSON.Polygon>, sketchLine, options);
-                // console.log('polyResult', polyResult);
-
-                if (polyResult)
+                if (polyResult) {
                     results.push(...polyResult);
+                    waitingDelLayer.push(layer);
+                }
                 break;
             case 'MultiPolygon':
                 const MultiPolyResult = reshapeMultiPolygonByLine(geojson as GeoJSON.Feature<GeoJSON.MultiPolygon>, sketchLine, options);
-                if (MultiPolyResult)
+                if (MultiPolyResult) {
                     results.push(...MultiPolyResult);
+                    waitingDelLayer.push(layer);
+                }
                 break;
             default:
                 console.warn(`不支持的图层类型: ${type}`);
@@ -142,7 +144,6 @@ export function reshapeSelectedLayersByLine(
         }
 
     });
-    // console.log('results', results);
 
     return { doReshapeLayers: waitingDelLayer, reshapedGeoms: results };
 }
