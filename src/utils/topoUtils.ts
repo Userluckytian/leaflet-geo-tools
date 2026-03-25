@@ -1,7 +1,7 @@
 import { flattenEach, union, featureCollection, booleanPointOnLine, lineString } from "@turf/turf";
 import splitPolygon from "../topo/turf-polygon-split";
 import { reshapeLineByLine, reshapePolygonByLine, reshapeMultiPolygonByLine } from "../topo/turf-reshape-feature";
-import { TopoClipResult, ReshapeOptions, TopoReshapeFeatureResult } from "../types";
+import type { TopoClipResult, ReshapeOptions, TopoReshapeFeatureResult } from "../types";
 
 
 /** 保存裁剪后的图层
@@ -227,4 +227,24 @@ export function isPointOnLine(pointGeoJSON: any, lineGeoJSON: any): boolean {
     
     console.warn('不支持的几何类型:', geometryType);
     return false;
+}
+
+
+
+/** 点是否在圆内
+ *
+ *
+ * @export
+ * @param {L.LatLng} point
+ * @param {L.Circle} layer
+ * @return {*} 
+ */
+export function isPointClickInCircle(point: L.LatLng, layer: L.Circle) {
+    const center = layer.getLatLng();
+    const radius = layer.getRadius();
+
+    // 计算两点距离（单位：米）
+    const distance = center.distanceTo(point);
+
+    return distance <= radius;
 }
