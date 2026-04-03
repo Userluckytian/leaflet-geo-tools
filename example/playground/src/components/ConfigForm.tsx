@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Form, InputNumber, Switch, Select, Input, Button, Space, Collapse, Card, Tooltip } from 'antd';
+import { Form, InputNumber, Switch, Select, Input, Button, Space, Collapse, Card, Tooltip, message } from 'antd';
 import { QuestionCircleOutlined } from '@ant-design/icons';
 import type { LeafletEditorOptions } from 'leaflet-geo-tools';
 
@@ -62,9 +62,70 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange, onGeomet
     }
   };
 
-  const handleValuesChange = (changedValues: any, allValues: LeafletEditorOptions) => {
+  const handleConfigChange = (changedValues: any, allValues: LeafletEditorOptions) => {
     setConfig(allValues);
+    
+    // 验证配置完整性并提醒用户
+    validateAndNotify(allValues);
+    
     onConfigChange?.(allValues);
+  };
+
+  // 验证配置完整性并提醒用户
+  const validateAndNotify = (config: LeafletEditorOptions) => {
+    const warnings: string[] = [];
+    
+    // 根据编辑器类型验证必要配置
+    switch (title) {
+      case '点编辑器':
+        if (!config.coordPrecision && config.coordPrecision !== 0) {
+          warnings.push('点编辑器建议设置坐标精度以确保点位准确性');
+        }
+        if (!config.defaultGeometry) {
+          warnings.push('点编辑器建议设置默认几何以快速开始编辑');
+        }
+        break;
+        
+      case '线编辑器':
+        if (!config.snap?.enabled) {
+          warnings.push('线编辑器建议启用吸附功能以提升编辑体验');
+        }
+        if (!config.edit?.enabled) {
+          warnings.push('线编辑器必须启用编辑功能才能进行线段编辑');
+        }
+        if (!config.defaultGeometry) {
+          warnings.push('线编辑器建议设置默认几何以快速开始编辑');
+        }
+        break;
+        
+      case '面编辑器':
+        if (!config.validation?.allowSelfIntersect && config.validation?.allowSelfIntersect !== false) {
+          warnings.push('面编辑器建议设置自相交规则以控制多边形有效性');
+        }
+        if (!config.edit?.enabled) {
+          warnings.push('面编辑器必须启用编辑功能才能进行多边形编辑');
+        }
+        if (!config.defaultGeometry) {
+          warnings.push('面编辑器建议设置默认几何以快速开始编辑');
+        }
+        break;
+    }
+    
+    // 通用配置验证
+    if (!config.defaultStyle) {
+      warnings.push('建议设置默认样式以确保几何显示效果');
+    }
+    
+    // 显示提醒信息
+    if (warnings.length > 0) {
+      warnings.forEach((warning, index) => {
+        setTimeout(() => {
+          message.warning(warning);
+        }, index * 1000); // 间隔显示避免消息重叠
+      });
+    } else {
+      message.success('配置已应用，所有必要配置项已完整');
+    }
   };
 
   const handleLoadGeometry = () => {
