@@ -86,6 +86,10 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange, onGeomet
       onGeometryLoad({ defaultStyle: style });
       // 同时设置到表单中
       form.setFieldValue('defaultStyle', JSON.stringify(style, null, 2));
+      // 更新config状态
+      const newConfig = { ...config, defaultStyle: JSON.stringify(style, null, 2) };
+      setConfig(newConfig);
+      onConfigChange?.(newConfig);
     }
   };
 
@@ -301,22 +305,52 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange, onGeomet
           {/* 编辑配置 */}
           <Collapse size="small" ghost>
             <Panel header="编辑配置" key="edit">
-              <Form.Item label="启用编辑" name={['edit', 'enabled']} valuePropName="checked">
+              <Form.Item 
+                label={
+                  <span>
+                    启用编辑
+                    <Tooltip title="开启后可以对几何进行编辑操作">
+                      <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                    </Tooltip>
+                  </span>
+                } 
+                name={['edit', 'enabled']} 
+                valuePropName="checked"
+              >
                 <Switch />
               </Form.Item>
 
               {/* 顶点样式配置 */}
               <Collapse size="small" ghost style={{ marginTop: 8 }}>
                 <Panel header="顶点样式" key="vertexStyle">
-                  <Form.Item label="顶点颜色" name={['edit', 'vertexsMarkerStyle', 'fillColor']}>
+                  <Form.Item 
+                    label={
+                      <span>
+                        顶点颜色
+                        <Tooltip title="编辑时顶点标记的颜色">
+                          <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                        </Tooltip>
+                      </span>
+                    } 
+                    name={['edit', 'vertexsMarkerStyle', 'fillColor']}
+                  >
                     <Input placeholder="颜色值，如: #ff7800" />
                   </Form.Item>
 
-                  <Form.Item label="顶点半径" name={['edit', 'vertexsMarkerStyle', 'radius']}>
+                  <Form.Item 
+                    label={
+                      <span>
+                        顶点半径
+                        <Tooltip title="编辑时顶点标记的半径">
+                          <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                        </Tooltip>
+                      </span>
+                    } 
+                    name={['edit', 'vertexsMarkerStyle', 'radius']}
+                  >
                     <InputNumber
                       min={0}
                       placeholder="像素值"
-                      style={{ width: '100%' }}
                     />
                   </Form.Item>
                 </Panel>
@@ -394,18 +428,49 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange, onGeomet
           {/* 校验配置 */}
           <Collapse size="small" ghost>
             <Panel header="校验配置" key="validation">
-              <Form.Item label="允许自相交" name={['validation', 'allowSelfIntersect']} valuePropName="checked">
+              <Form.Item 
+                label={
+                  <span>
+                    允许自相交
+                    <Tooltip title="允许几何图形自相交，如多边形的边可以交叉">
+                      <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                    </Tooltip>
+                  </span>
+                } 
+                name={['validation', 'allowSelfIntersect']} 
+                valuePropName="checked"
+              >
                 <Switch />
               </Form.Item>
 
               {/* 校验失败样式配置 */}
               <Collapse size="small" ghost style={{ marginTop: 8 }}>
                 <Panel header="错误样式" key="errorStyle">
-                  <Form.Item label="多边形错误颜色" name={['validation', 'validErrorPolygonStyle', 'color']}>
+                  <Form.Item 
+                    label={
+                      <span>
+                        多边形错误颜色
+                        <Tooltip title="多边形校验失败时的边框颜色">
+                          <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                        </Tooltip>
+                      </span>
+                    } 
+                    name={['validation', 'validErrorPolygonStyle', 'color']}
+                  >
                     <Input placeholder="颜色值，如: #ff0000" />
                   </Form.Item>
 
-                  <Form.Item label="多边形错误宽度" name={['validation', 'validErrorPolygonStyle', 'weight']}>
+                  <Form.Item 
+                    label={
+                      <span>
+                        多边形错误宽度
+                        <Tooltip title="多边形校验失败时的边框宽度">
+                          <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                        </Tooltip>
+                      </span>
+                    } 
+                    name={['validation', 'validErrorPolygonStyle', 'weight']}
+                  >
                     <InputNumber
                       min={0}
                       placeholder="像素值"
@@ -413,11 +478,31 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange, onGeomet
                     />
                   </Form.Item>
 
-                  <Form.Item label="线错误颜色" name={['validation', 'validErrorLineStyle', 'color']}>
+                  <Form.Item 
+                    label={
+                      <span>
+                        线错误颜色
+                        <Tooltip title="线校验失败时的颜色">
+                          <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                        </Tooltip>
+                      </span>
+                    } 
+                    name={['validation', 'validErrorLineStyle', 'color']}
+                  >
                     <Input placeholder="颜色值，如: #ff0000" />
                   </Form.Item>
 
-                  <Form.Item label="线错误宽度" name={['validation', 'validErrorLineStyle', 'weight']}>
+                  <Form.Item 
+                    label={
+                      <span>
+                        线错误宽度
+                        <Tooltip title="线校验失败时的线条宽度">
+                          <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                        </Tooltip>
+                      </span>
+                    } 
+                    name={['validation', 'validErrorLineStyle', 'weight']}
+                  >
                     <InputNumber
                       min={0}
                       placeholder="像素值"
@@ -425,11 +510,31 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange, onGeomet
                     />
                   </Form.Item>
 
-                  <Form.Item label="点错误颜色" name={['validation', 'validErrorPointStyle', 'fillColor']}>
+                  <Form.Item 
+                    label={
+                      <span>
+                        点错误颜色
+                        <Tooltip title="点校验失败时的颜色">
+                          <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                        </Tooltip>
+                      </span>
+                    } 
+                    name={['validation', 'validErrorPointStyle', 'fillColor']}
+                  >
                     <Input placeholder="颜色值，如: #ff0000" />
                   </Form.Item>
 
-                  <Form.Item label="点错误半径" name={['validation', 'validErrorPointStyle', 'radius']}>
+                  <Form.Item 
+                    label={
+                      <span>
+                        点错误半径
+                        <Tooltip title="点校验失败时的标记半径">
+                          <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                        </Tooltip>
+                      </span>
+                    } 
+                    name={['validation', 'validErrorPointStyle', 'radius']}
+                  >
                     <InputNumber
                       min={0}
                       placeholder="像素值"
