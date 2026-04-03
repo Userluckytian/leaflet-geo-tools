@@ -71,34 +71,14 @@
 .config-form {
   .ant-form-item {
     margin-bottom: 16px;
-    display: flex;
-    align-items: flex-start;
-    flex-direction: row;
   }
 
   .ant-form-item-label {
     font-weight: 500;
-    min-width: 120px;
-    text-align: right;
-    padding-right: 8px;
-    flex-shrink: 0;
   }
 
   .ant-form-item-control {
     flex: 1;
-    min-width: 0;
-  }
-
-  // 对于折叠面板内的表单项，保持垂直布局
-  .ant-collapse-content-box {
-    .ant-form-item {
-      flex-direction: column;
-      
-      .ant-form-item-label {
-        text-align: left;
-        padding-right: 0;
-      }
-    }
   }
 }
 
