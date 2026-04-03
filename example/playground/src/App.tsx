@@ -1,35 +1,61 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { ConfigProvider, Tabs } from 'antd';
+import zhCN from 'antd/lib/locale/zh_CN';
+import 'antd/dist/antd.css';
+import PointEditorTab from './components/tabs/PointEditorTab';
+import PolylineEditorTab from './components/tabs/PolylineEditorTab';
+import PolygonEditorTab from './components/tabs/PolygonEditorTab';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const tabItems = [
+    {
+      key: '1',
+      label: '点编辑器',
+      children: <PointEditorTab />,
+    },
+    {
+      key: '2', 
+      label: '线编辑器',
+      children: <PolylineEditorTab />,
+    },
+    {
+      key: '3',
+      label: '面编辑器', 
+      children: <PolygonEditorTab />,
+    },
+    {
+      key: '4',
+      label: '矩形编辑器',
+      children: '矩形编辑器内容开发中...',
+    },
+    {
+      key: '5',
+      label: '圆编辑器',
+      children: '圆编辑器内容开发中...',
+    },
+    {
+      key: '6',
+      label: '拓扑操作',
+      children: '拓扑操作内容开发中...',
+    },
+    {
+      key: '7',
+      label: '整形操作',
+      children: '整形操作内容开发中...',
+    }
+  ];
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <ConfigProvider locale={zhCN}>
+      <div style={{ padding: '20px', height: '100vh' }}>
+        <Tabs 
+          defaultActiveKey="1" 
+          items={tabItems}
+          size="large"
+          style={{ height: '100%' }}
+        />
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    </ConfigProvider>
+  );
 }
 
-export default App
+export default App;
