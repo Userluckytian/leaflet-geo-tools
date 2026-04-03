@@ -43,6 +43,7 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange }) => {
           initialValues={config}
           onValuesChange={handleValuesChange}
           size="small"
+          className="config-form"
         >
           {/* 基础配置 */}
           <Collapse size="small" ghost>
