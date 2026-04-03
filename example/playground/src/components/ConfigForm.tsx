@@ -180,7 +180,12 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange, onGeomet
           className="config-form"
         >
           {/* 基础配置 */}
-          <Collapse size="small" ghost accordion>
+          <Collapse 
+            size="small" 
+            ghost 
+            accordion
+            defaultActiveKey={[]}
+          >
             <Panel header="基础配置" key="basic">
               <Form.Item 
                 label={
@@ -224,7 +229,12 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange, onGeomet
           </Collapse>
 
           {/* 吸附配置 */}
-          <Collapse size="small" ghost accordion>
+          <Collapse 
+            size="small" 
+            ghost 
+            accordion
+            defaultActiveKey={[]}
+          >
             <Panel header="吸附配置" key="snap">
               <Form.Item 
                 label={
@@ -295,7 +305,7 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange, onGeomet
               </Form.Item>
 
               {/* 吸附高亮样式配置 */}
-              <Collapse size="small" ghost style={{ marginTop: 8 }}>
+              <Collapse size="small" ghost accordion style={{ marginTop: 8 }}>
                 <Panel header="高亮样式" key="snapHighlight">
                   <Form.Item 
                     label={
