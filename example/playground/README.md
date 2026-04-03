@@ -1,114 +1,54 @@
-# Leaflet Geo Tools Playground
+# React + TypeScript + Vite
 
-这是一个基于 Vite + React + TypeScript 的地理工具演示项目，用于展示和测试 Leaflet Geo Tools 的各种功能。
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## 项目特性
+Currently, two official plugins are available:
 
-- 🗺️ 基于 Leaflet 的交互式地图
-- �️ 天地图集成（矢量、影像地图）
-- �🛠️ 多种地理编辑工具
-- 📍 点、线、面编辑功能
-- ⭕ 圆形和矩形绘制
-- 🔗 拓扑操作工具
-- ✏️ 整形操作功能
-- 🎨 现代化的 UI 设计
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## 天地图集成
+## Expanding the ESLint configuration
 
-应用使用天地图作为地图服务提供商：
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-- **矢量底图**: 显示街道、地名等地理信息
-- **影像底图**: 卫星影像地图
-- **矢量注记**: 中文地名标注
-- **影像注记**: 影像地图标注
-
-**天地图API密钥已配置**，无需额外设置即可使用。
-
-## 技术栈
-
-- **前端框架**: React 19 + TypeScript
-- **构建工具**: Vite
-- **地图库**: Leaflet
-- **样式**: CSS Modules + Flexbox
-
-## 快速开始
-
-### 安装依赖
-
-```bash
-npm install
+```js
+export default tseslint.config({
+  extends: [
+    // Remove ...tseslint.configs.recommended and replace with this
+    ...tseslint.configs.recommendedTypeChecked,
+    // Alternatively, use this for stricter rules
+    ...tseslint.configs.strictTypeChecked,
+    // Optionally, add this for stylistic rules
+    ...tseslint.configs.stylisticTypeChecked,
+  ],
+  languageOptions: {
+    // other options...
+    parserOptions: {
+      project: ['./tsconfig.node.json', './tsconfig.app.json'],
+      tsconfigRootDir: import.meta.dirname,
+    },
+  },
+})
 ```
 
-### 启动开发服务器
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-```bash
-npm run dev
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
+
+export default tseslint.config({
+  plugins: {
+    // Add the react-x and react-dom plugins
+    'react-x': reactX,
+    'react-dom': reactDom,
+  },
+  rules: {
+    // other rules...
+    // Enable its recommended typescript rules
+    ...reactX.configs['recommended-typescript'].rules,
+    ...reactDom.configs.recommended.rules,
+  },
+})
 ```
-
-应用将在 http://localhost:5173 启动。
-
-### 构建生产版本
-
-```bash
-npm run build
-```
-
-### 预览生产版本
-
-```bash
-npm run preview
-```
-
-## 项目结构
-
-```
-src/
-├── components/
-│   ├── MapContainer.tsx    # 地图容器组件
-│   ├── MapContainer.css
-│   ├── ToolPanel.tsx       # 工具面板组件
-│   └── ToolPanel.css
-├── App.tsx                 # 主应用组件
-├── App.css                 # 主应用样式
-└── main.tsx               # 应用入口
-```
-
-## 可用工具
-
-1. **点编辑** - 在地图上添加和编辑点要素
-2. **线编辑** - 绘制和编辑线要素
-3. **面编辑** - 创建和编辑多边形要素
-4. **圆形编辑** - 绘制和编辑圆形要素
-5. **矩形编辑** - 绘制和编辑矩形要素
-6. **拓扑操作** - 执行拓扑关系操作
-7. **整形操作** - 编辑要素形状
-
-## 开发说明
-
-### 添加新工具
-
-1. 在 `ToolPanel.tsx` 中添加新工具到 `tools` 数组
-2. 创建对应的工具组件
-3. 在 `App.tsx` 中处理工具选择逻辑
-
-### 自定义地图样式
-
-可以在 `MapContainer.tsx` 中修改地图图层配置：
-
-```typescript
-// 使用不同的地图图层
-L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
-  attribution: '© OpenStreetMap contributors, Tiles style by Humanitarian OpenStreetMap Team'
-}).addTo(map)
-```
-
-## 浏览器支持
-
-- Chrome (推荐)
-- Firefox
-- Safari
-- Edge
-
-## 许可证
-
-MIT License
