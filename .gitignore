@@ -1,2 +1,6 @@
 node_modules
 publish-docs.md
+plan
+src/index.tsx
+example/playground/node_modules
+example/playground/dist
