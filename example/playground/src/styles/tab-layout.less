@@ -8,8 +8,8 @@
     display: flex;
 
     .left-panel {
-      width: 400px;
-      min-width: 400px;
+      width: 500px;
+      min-width: 500px;
       background: #fafafa;
       border-right: 1px solid #d9d9d9;
       padding: 16px;
@@ -62,7 +62,7 @@
 .map-wrapper {
   padding: 16px;
   height: calc(100vh - 61px);
-  width: calc(100vw - 400px - 1px);
+  width: calc(100vw - 500px - 1px);
   overflow: hidden;
   box-sizing: border-box;
 }
@@ -75,6 +75,41 @@
 
   .ant-form-item-label {
     font-weight: 500;
+    min-width: 120px;
+  }
+
+  .ant-form-item-control {
+    flex: 1;
+  }
+
+  // 优化表单项布局，让标签和输入框在一行
+  .ant-form-item {
+    display: flex;
+    align-items: flex-start;
+    flex-direction: row;
+    
+    .ant-form-item-label {
+      text-align: right;
+      padding-right: 8px;
+      flex-shrink: 0;
+    }
+    
+    .ant-form-item-control {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+
+  // 对于折叠面板内的表单项，保持垂直布局
+  .ant-collapse-content-box {
+    .ant-form-item {
+      flex-direction: column;
+      
+      .ant-form-item-label {
+        text-align: left;
+        padding-right: 0;
+      }
+    }
   }
 }
 
