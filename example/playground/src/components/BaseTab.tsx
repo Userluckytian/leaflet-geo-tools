@@ -1,13 +1,14 @@
 import React from 'react';
 import { Card, Form, Input, Button, Space, Divider } from 'antd';
+import TiandituMap from './TiandituMap';
 import '../styles/tab-layout.less';
 
 export interface BaseTabProps {
   title: string;
-  children?: React.ReactNode;
+  onMapReady?: (map: L.Map) => void;
 }
 
-const BaseTab: React.FC<BaseTabProps> = ({ title, children }) => {
+const BaseTab: React.FC<BaseTabProps> = ({ title, onMapReady }) => {
   return (
     <div className="tab-container">
       <div className="tab-content">
@@ -43,7 +44,9 @@ const BaseTab: React.FC<BaseTabProps> = ({ title, children }) => {
 
         {/* 右侧面板 */}
         <div className="right-panel">
-          {children}
+          <div className="map-wrapper">
+            <TiandituMap onMapReady={onMapReady} />
+          </div>
         </div>
       </div>
     </div>
