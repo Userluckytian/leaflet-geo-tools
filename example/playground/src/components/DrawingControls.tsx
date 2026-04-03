@@ -1,24 +1,14 @@
 import React from 'react';
 import { Button, Space, Card } from 'antd';
 import { PlayCircleOutlined, PauseCircleOutlined, ClearOutlined } from '@ant-design/icons';
+import { useEditor } from '../contexts/EditorContext';
 
 interface DrawingControlsProps {
-  onStartDrawing?: () => void;
-  onStopDrawing?: () => void;
-  onClearGeometry?: () => void;
-  isDrawing?: boolean;
-  hasGeometry?: boolean;
-  hasEditor?: boolean; // 新增：是否有编辑器实例
+  // 不再需要任何props，全部从context获取
 }
 
-const DrawingControls: React.FC<DrawingControlsProps> = ({
-  onStartDrawing,
-  onStopDrawing,
-  onClearGeometry,
-  isDrawing = false,
-  hasGeometry = false,
-  hasEditor = false
-}) => {
+const DrawingControls: React.FC<DrawingControlsProps> = () => {
+  const { state, startDrawing, stopDrawing, clearGeometry } = useEditor();
   return (
     <Card 
       title="绘制控制" 
@@ -30,23 +20,23 @@ const DrawingControls: React.FC<DrawingControlsProps> = ({
           <Button
             type="primary"
             icon={<PlayCircleOutlined />}
-            onClick={onStartDrawing}
-            disabled={isDrawing}
+            onClick={startDrawing}
+            disabled={state.isDrawing || state.isEditing}
           >
             开始绘制
           </Button>
           <Button
             icon={<PauseCircleOutlined />}
-            onClick={onStopDrawing}
-            disabled={!isDrawing}
+            onClick={stopDrawing}
+            disabled={!state.isDrawing && !state.isEditing}
           >
             停止绘制
           </Button>
         </Space>
         <Button
           icon={<ClearOutlined />}
-          onClick={onClearGeometry}
-          disabled={!hasEditor} // 只要有编辑器实例就启用
+          onClick={clearGeometry}
+          disabled={!state.hasEditor}
           danger
         >
           清除几何

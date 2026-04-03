@@ -6,33 +6,54 @@ import PolylineEditorTab from './components/tabs/PolylineEditorTab';
 import PolygonEditorTab from './components/tabs/PolygonEditorTab';
 import RectangleEditorTab from './components/tabs/RectangleEditorTab';
 import CircleEditorTab from './components/tabs/CircleEditorTab';
+import { EditorProvider } from './contexts/EditorContext';
 
 function App() {
   const tabItems = [
     {
       key: '1',
       label: '点编辑器',
-      children: <PointEditorTab />,
+      children: (
+        <EditorProvider>
+          <PointEditorTab />
+        </EditorProvider>
+      ),
     },
     {
       key: '2', 
       label: '线编辑器',
-      children: <PolylineEditorTab />,
+      children: (
+        <EditorProvider>
+          <PolylineEditorTab />
+        </EditorProvider>
+      ),
     },
     {
       key: '3',
       label: '面编辑器', 
-      children: <PolygonEditorTab />,
+      children: (
+        <EditorProvider>
+          <PolygonEditorTab />
+        </EditorProvider>
+      ),
     },
     {
       key: '4',
       label: '矩形编辑器',
-      children: <RectangleEditorTab />,
+      children: (
+        <EditorProvider>
+          <RectangleEditorTab />
+        </EditorProvider>
+      ),
     },
     {
       key: '5',
       label: '圆编辑器',
-      children: <CircleEditorTab />,
+      children: (
+        <EditorProvider>
+          <CircleEditorTab />
+        </EditorProvider>
+      ),
     },
     {
       key: '6',
