@@ -46,12 +46,12 @@ function App() {
 
   return (
     <ConfigProvider locale={zhCN}>
-      <div style={{ padding: '20px', height: '100vh' }}>
+      <div style={{ height: '100vh', width: '100vw', margin: 0, padding: 0 }}>
         <Tabs 
           defaultActiveKey="1" 
           items={tabItems}
           size="large"
-          style={{ height: '100%' }}
+          style={{ height: '100%', width: '100%' }}
         />
       </div>
     </ConfigProvider>
