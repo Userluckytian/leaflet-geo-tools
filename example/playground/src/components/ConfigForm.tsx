@@ -71,6 +71,12 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange, onGeomet
     const geometry = defaultGeometries[title as keyof typeof defaultGeometries];
     if (geometry && onGeometryLoad) {
       onGeometryLoad(geometry);
+      // 同时设置到表单中
+      form.setFieldValue('defaultGeometry', JSON.stringify(geometry, null, 2));
+      // 更新config状态
+      const newConfig = { ...config, defaultGeometry: JSON.stringify(geometry, null, 2) };
+      setConfig(newConfig);
+      onConfigChange?.(newConfig);
     }
   };
 
@@ -208,29 +214,80 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange, onGeomet
                 />
               </Form.Item>
 
-              <Form.Item label="启用吸附高亮" name={['snap', 'highlight', 'enabled']} valuePropName="checked">
+              <Form.Item 
+                label={
+                  <span>
+                    启用吸附高亮
+                    <Tooltip title="开启后吸附时显示高亮效果">
+                      <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                    </Tooltip>
+                  </span>
+                } 
+                name={['snap', 'highlight', 'enabled']} 
+                valuePropName="checked"
+              >
                 <Switch />
               </Form.Item>
 
               {/* 吸附高亮样式配置 */}
               <Collapse size="small" ghost style={{ marginTop: 8 }}>
                 <Panel header="高亮样式" key="snapHighlight">
-                  <Form.Item label="点高亮颜色" name={['snap', 'highlight', 'pointStyle', 'fillColor']}>
+                  <Form.Item 
+                    label={
+                      <span>
+                        点高亮颜色
+                        <Tooltip title="吸附到顶点时的高亮颜色">
+                          <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                        </Tooltip>
+                      </span>
+                    } 
+                    name={['snap', 'highlight', 'pointStyle', 'fillColor']}
+                  >
                     <Input placeholder="颜色值，如: #ff7800" />
                   </Form.Item>
 
-                  <Form.Item label="点高亮半径" name={['snap', 'highlight', 'pointStyle', 'radius']}>
+                  <Form.Item 
+                    label={
+                      <span>
+                        点高亮半径
+                        <Tooltip title="吸附到顶点时的高亮圆半径">
+                          <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                        </Tooltip>
+                      </span>
+                    } 
+                    name={['snap', 'highlight', 'pointStyle', 'radius']}
+                  >
                     <InputNumber
                       min={0}
                       placeholder="像素值"
                     />
                   </Form.Item>
 
-                  <Form.Item label="边高亮颜色" name={['snap', 'highlight', 'edgeStyle', 'color']}>
+                  <Form.Item 
+                    label={
+                      <span>
+                        边高亮颜色
+                        <Tooltip title="吸附到边时的高亮颜色">
+                          <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                        </Tooltip>
+                      </span>
+                    } 
+                    name={['snap', 'highlight', 'edgeStyle', 'color']}
+                  >
                     <Input placeholder="颜色值，如: #3388ff" />
                   </Form.Item>
 
-                  <Form.Item label="边高亮宽度" name={['snap', 'highlight', 'edgeStyle', 'weight']}>
+                  <Form.Item 
+                    label={
+                      <span>
+                        边高亮宽度
+                        <Tooltip title="吸附到边时的高亮线条宽度">
+                          <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                        </Tooltip>
+                      </span>
+                    } 
+                    name={['snap', 'highlight', 'edgeStyle', 'weight']}
+                  >
                     <InputNumber
                       min={0}
                       placeholder="像素值"
