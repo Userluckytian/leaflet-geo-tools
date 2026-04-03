@@ -15,8 +15,7 @@ interface MapContainerProps {
   zoom?: number
   className?: string
   onMapReady?: (map: L.Map) => void
-  mapProvider?: 'osm' | 'tianditu' // 地图提供商选择
-  tiandituKey?: string // 天地图API密钥
+  tiandituKey: string // 天地图API密钥
 }
 
 export function MapContainer({ 
@@ -24,47 +23,34 @@ export function MapContainer({
   zoom = 13,
   className = '',
   onMapReady,
-  mapProvider = 'osm',
-  tiandituKey = ''
+  tiandituKey
 }: MapContainerProps) {
   const mapRef = useRef<HTMLDivElement>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
 
   // 天地图图层配置
   const getTiandituLayers = (key: string) => {
-    const baseUrl = key 
-      ? `https://t{s}.tianditu.gov.cn/{service}_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER={layer}&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=${key}`
-      : `https://t{s}.tianditu.gov.cn/{service}_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER={layer}&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}`
+    const baseUrl = `https://t{s}.tianditu.gov.cn/{service}_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER={layer}&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=${key}`
 
     return {
       // 矢量底图
       vec: L.tileLayer(baseUrl.replace('{service}', 'vec').replace('{layer}', 'vec'), {
-        attribution: key ? '© 天地图' : '© 天地图 (免费版)',
+        attribution: '© 天地图',
         subdomains: ['0', '1', '2', '3', '4', '5', '6', '7']
       }),
       // 矢量注记
       cva: L.tileLayer(baseUrl.replace('{service}', 'cva').replace('{layer}', 'cva'), {
-        attribution: key ? '© 天地图' : '© 天地图 (免费版)',
+        attribution: '© 天地图',
         subdomains: ['0', '1', '2', '3', '4', '5', '6', '7']
       }),
       // 影像底图
       img: L.tileLayer(baseUrl.replace('{service}', 'img').replace('{layer}', 'img'), {
-        attribution: key ? '© 天地图' : '© 天地图 (免费版)',
+        attribution: '© 天地图',
         subdomains: ['0', '1', '2', '3', '4', '5', '6', '7']
       }),
       // 影像注记
       cia: L.tileLayer(baseUrl.replace('{service}', 'cia').replace('{layer}', 'cia'), {
-        attribution: key ? '© 天地图' : '© 天地图 (免费版)',
-        subdomains: ['0', '1', '2', '3', '4', '5', '6', '7']
-      }),
-      // 地形底图
-      ter: L.tileLayer(baseUrl.replace('{service}', 'ter').replace('{layer}', 'ter'), {
-        attribution: key ? '© 天地图' : '© 天地图 (免费版)',
-        subdomains: ['0', '1', '2', '3', '4', '5', '6', '7']
-      }),
-      // 地形注记
-      cta: L.tileLayer(baseUrl.replace('{service}', 'cta').replace('{layer}', 'cta'), {
-        attribution: key ? '© 天地图' : '© 天地图 (免费版)',
+        attribution: '© 天地图',
         subdomains: ['0', '1', '2', '3', '4', '5', '6', '7']
       })
     }
@@ -76,18 +62,11 @@ export function MapContainer({
     // 初始化地图
     const map = L.map(mapRef.current).setView(center, zoom)
 
-    // 根据提供商添加地图图层
-    if (mapProvider === 'tianditu') {
-      const tiandituLayers = getTiandituLayers(tiandituKey)
-      // 默认使用矢量底图 + 注记
-      tiandituLayers.vec.addTo(map)
-      tiandituLayers.cva.addTo(map)
-    } else {
-      // OpenStreetMap
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-      }).addTo(map)
-    }
+    // 添加天地图图层
+    const tiandituLayers = getTiandituLayers(tiandituKey)
+    // 默认使用矢量底图 + 注记
+    tiandituLayers.vec.addTo(map)
+    tiandituLayers.cva.addTo(map)
 
     mapInstanceRef.current = map
 
