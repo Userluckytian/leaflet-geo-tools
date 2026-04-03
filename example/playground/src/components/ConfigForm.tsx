@@ -62,7 +62,7 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange, onGeomet
     }
   };
 
-  const handleConfigChange = (changedValues: any, allValues: LeafletEditorOptions) => {
+  const handleValuesChange = (changedValues: any, allValues: LeafletEditorOptions) => {
     setConfig(allValues);
     
     // 验证配置完整性并提醒用户
