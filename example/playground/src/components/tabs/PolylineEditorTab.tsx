@@ -1,22 +1,23 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import BaseTab from '../BaseTab';
 import type { LeafletEditorOptions } from 'leaflet-geo-tools';
+import L from 'leaflet';
 
 const PolylineEditorTab: React.FC = () => {
-  const editorRef = useRef<any>(null);
+  const editorRef = React.useRef<any>(null);
 
   const handleMapReady = (map: L.Map) => {
-    console.log('PolylineEditor map ready');
-    // 这里可以初始化线编辑器
-    // editorRef.current = new PolylineEditor(map, config);
+    console.log('Polyline Editor Map Ready:', map);
   };
 
   const handleConfigChange = (config: LeafletEditorOptions) => {
-    console.log('PolylineEditor config changed:', config);
-    // 这里可以更新编辑器配置
-    // if (editorRef.current) {
-    //   editorRef.current.updateOptions(config);
-    // }
+    console.log('Polyline Editor Config Change:', config);
+  };
+
+  const handleGeometryLoad = (geometry: any) => {
+    console.log('Polyline Editor Geometry Load:', geometry);
+    // 这里可以根据需要实例化编辑器
+    // new PolylineEditor(map, { defaultGeometry: geometry, ...config });
   };
 
   return (
@@ -24,6 +25,7 @@ const PolylineEditorTab: React.FC = () => {
       title="线编辑器" 
       onMapReady={handleMapReady}
       onConfigChange={handleConfigChange}
+      onGeometryLoad={handleGeometryLoad}
     />
   );
 };

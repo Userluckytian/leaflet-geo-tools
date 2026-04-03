@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Form, InputNumber, Switch, Select, Input, Button, Space, Collapse, Card } from 'antd';
+import { Form, InputNumber, Switch, Select, Input, Button, Space, Collapse, Card, Tooltip } from 'antd';
+import { QuestionCircleOutlined } from '@ant-design/icons';
 import type { LeafletEditorOptions } from 'leaflet-geo-tools';
 
 const { Panel } = Collapse;
@@ -8,15 +9,50 @@ const { TextArea } = Input;
 interface ConfigFormProps {
   title: string;
   onConfigChange?: (config: LeafletEditorOptions) => void;
+  onGeometryLoad?: (geometry: any) => void;
 }
 
-const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange }) => {
+const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange, onGeometryLoad }) => {
   const [form] = Form.useForm();
   const [config, setConfig] = useState<LeafletEditorOptions>({});
+
+  // 默认几何数据
+  const defaultGeometries = {
+    '点编辑器': {
+      type: 'Point',
+      coordinates: [116.4074, 39.9042] // 北京坐标
+    },
+    '线编辑器': {
+      type: 'LineString',
+      coordinates: [
+        [116.4074, 39.9042],
+        [116.4174, 39.9142],
+        [116.4274, 39.9042]
+      ]
+    },
+    '面编辑器': {
+      type: 'Polygon',
+      coordinates: [[
+        [116.4074, 39.9042],
+        [116.4174, 39.9142],
+        [116.4274, 39.9042],
+        [116.4074, 39.9042]
+      ]]
+    }
+  };
 
   const handleValuesChange = (changedValues: any, allValues: LeafletEditorOptions) => {
     setConfig(allValues);
     onConfigChange?.(allValues);
+  };
+
+  const handleLoadGeometry = () => {
+    const geometry = defaultGeometries[title as keyof typeof defaultGeometries];
+    if (geometry && onGeometryLoad) {
+      onGeometryLoad(geometry);
+      // 同时设置到表单中
+      form.setFieldValue('defaultGeometry', JSON.stringify(geometry, null, 2));
+    }
   };
 
   const generateConfigJson = () => {
@@ -47,7 +83,17 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange }) => {
           {/* 基础配置 */}
           <Collapse size="small" ghost>
             <Panel header="基础配置" key="basic">
-              <Form.Item label="坐标精度" name="coordPrecision">
+              <Form.Item 
+                label={
+                  <span>
+                    坐标精度
+                    <Tooltip title="控制几何坐标的小数位数，影响编辑精度">
+                      <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                    </Tooltip>
+                  </span>
+                } 
+                name="coordPrecision"
+              >
                 <InputNumber
                   min={0}
                   max={10}
@@ -55,11 +101,32 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange }) => {
                 />
               </Form.Item>
 
-              <Form.Item label="默认几何" name="defaultGeometry">
-                <TextArea
-                  rows={3}
-                  placeholder="GeoJSON格式的默认几何信息"
-                />
+              <Form.Item 
+                label={
+                  <span>
+                    默认几何
+                    <Tooltip title="点击加载按钮可加载预设的几何数据">
+                      <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                    </Tooltip>
+                  </span>
+                } 
+                name="defaultGeometry"
+              >
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <TextArea
+                    rows={3}
+                    placeholder="GeoJSON格式的默认几何信息"
+                    style={{ flex: 1 }}
+                  />
+                  <Button 
+                    type="primary" 
+                    onClick={handleLoadGeometry}
+                    size="small"
+                    style={{ alignSelf: 'flex-start' }}
+                  >
+                    加载
+                  </Button>
+                </div>
               </Form.Item>
             </Panel>
           </Collapse>
@@ -67,11 +134,32 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange }) => {
           {/* 吸附配置 */}
           <Collapse size="small" ghost>
             <Panel header="吸附配置" key="snap">
-              <Form.Item label="启用吸附" name={['snap', 'enabled']} valuePropName="checked">
+              <Form.Item 
+                label={
+                  <span>
+                    启用吸附
+                    <Tooltip title="开启后编辑时可以自动吸附到附近的其他几何元素">
+                      <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                    </Tooltip>
+                  </span>
+                } 
+                name={['snap', 'enabled']} 
+                valuePropName="checked"
+              >
                 <Switch />
               </Form.Item>
 
-              <Form.Item label="吸附模式" name={['snap', 'modes']}>
+              <Form.Item 
+                label={
+                  <span>
+                    吸附模式
+                    <Tooltip title="选择吸附到顶点还是边">
+                      <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                    </Tooltip>
+                  </span>
+                } 
+                name={['snap', 'modes']}
+              >
                 <Select
                   mode="multiple"
                   placeholder="选择吸附模式"
@@ -82,7 +170,17 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange }) => {
                 />
               </Form.Item>
 
-              <Form.Item label="吸附阈值" name={['snap', 'tolerance']}>
+              <Form.Item 
+                label={
+                  <span>
+                    吸附阈值
+                    <Tooltip title="吸附的最大距离，单位为像素">
+                      <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                    </Tooltip>
+                  </span>
+                } 
+                name={['snap', 'tolerance']}
+              >
                 <InputNumber
                   min={0}
                   placeholder="像素值，默认值: 10"
@@ -90,7 +188,7 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange }) => {
               </Form.Item>
 
               <Form.Item label="启用吸附高亮" name={['snap', 'highlight', 'enabled']} valuePropName="checked">
-                <Switch style={{ width: 'calc(100% - 120px)', minWidth: '200px' }} />
+                <Switch />
               </Form.Item>
 
               {/* 吸附高亮样式配置 */}
