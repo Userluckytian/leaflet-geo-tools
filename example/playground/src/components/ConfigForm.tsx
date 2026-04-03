@@ -180,7 +180,7 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange, onGeomet
           className="config-form"
         >
           {/* 基础配置 */}
-          <Collapse size="small" ghost>
+          <Collapse size="small" ghost accordion>
             <Panel header="基础配置" key="basic">
               <Form.Item 
                 label={
@@ -224,7 +224,7 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange, onGeomet
           </Collapse>
 
           {/* 吸附配置 */}
-          <Collapse size="small" ghost>
+          <Collapse size="small" ghost accordion>
             <Panel header="吸附配置" key="snap">
               <Form.Item 
                 label={
@@ -364,7 +364,7 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange, onGeomet
           </Collapse>
 
           {/* 编辑配置 */}
-          <Collapse size="small" ghost>
+          <Collapse size="small" ghost accordion>
             <Panel header="编辑配置" key="edit">
               <Form.Item 
                 label={
@@ -579,7 +579,7 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange, onGeomet
           </Collapse>
 
           {/* 校验配置 */}
-          <Collapse size="small" ghost>
+          <Collapse size="small" ghost accordion>
             <Panel header="校验配置" key="validation">
               <Form.Item 
                 label={
@@ -700,7 +700,7 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange, onGeomet
           </Collapse>
 
           {/* 样式配置 */}
-          <Collapse size="small" ghost>
+          <Collapse size="small" ghost accordion>
             <Panel header="默认样式" key="style">
               <Form.Item 
                 label={
