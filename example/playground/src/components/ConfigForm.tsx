@@ -41,6 +41,27 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange, onGeomet
     }
   };
 
+  // 默认样式数据
+  const defaultStyles = {
+    '点编辑器': {
+      color: '#ff7800',
+      fillColor: '#ff7800',
+      fillOpacity: 0.6,
+      radius: 8
+    },
+    '线编辑器': {
+      color: '#3388ff',
+      weight: 4,
+      opacity: 0.8
+    },
+    '面编辑器': {
+      color: '#3388ff',
+      fillColor: '#3388ff',
+      fillOpacity: 0.3,
+      weight: 2
+    }
+  };
+
   const handleValuesChange = (changedValues: any, allValues: LeafletEditorOptions) => {
     setConfig(allValues);
     onConfigChange?.(allValues);
@@ -50,8 +71,15 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange, onGeomet
     const geometry = defaultGeometries[title as keyof typeof defaultGeometries];
     if (geometry && onGeometryLoad) {
       onGeometryLoad(geometry);
+    }
+  };
+
+  const handleLoadStyle = () => {
+    const style = defaultStyles[title as keyof typeof defaultStyles];
+    if (style && onGeometryLoad) {
+      onGeometryLoad({ defaultStyle: style });
       // 同时设置到表单中
-      form.setFieldValue('defaultGeometry', JSON.stringify(geometry, null, 2));
+      form.setFieldValue('defaultStyle', JSON.stringify(style, null, 2));
     }
   };
 
@@ -112,21 +140,14 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange, onGeomet
                 } 
                 name="defaultGeometry"
               >
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <TextArea
-                    rows={3}
-                    placeholder="GeoJSON格式的默认几何信息"
-                    style={{ flex: 1 }}
-                  />
-                  <Button 
+                <Button 
                     type="primary" 
                     onClick={handleLoadGeometry}
                     size="small"
-                    style={{ alignSelf: 'flex-start' }}
+                    style={{ width: '100%' }}
                   >
-                    加载
+                    加载默认几何
                   </Button>
-                </div>
               </Form.Item>
             </Panel>
           </Collapse>
@@ -366,11 +387,25 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange, onGeomet
           {/* 样式配置 */}
           <Collapse size="small" ghost>
             <Panel header="默认样式" key="style">
-              <Form.Item label="默认样式" name="defaultStyle">
-                <TextArea
-                  rows={6}
-                  placeholder="Leaflet样式配置JSON"
-                />
+              <Form.Item 
+                label={
+                  <span>
+                    默认样式
+                    <Tooltip title="点击加载按钮可加载预设的样式配置">
+                      <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                    </Tooltip>
+                  </span>
+                } 
+                name="defaultStyle"
+              >
+                <Button 
+                    type="primary" 
+                    onClick={handleLoadStyle}
+                    size="small"
+                    style={{ width: '100%' }}
+                  >
+                    加载默认样式
+                  </Button>
               </Form.Item>
             </Panel>
           </Collapse>
