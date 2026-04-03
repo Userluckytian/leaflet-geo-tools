@@ -359,15 +359,46 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange, onGeomet
               {/* 拖动边标记配置 */}
               <Collapse size="small" ghost style={{ marginTop: 8 }}>
                 <Panel header="拖动边标记" key="dragLineMarker">
-                  <Form.Item label="启用拖动边" name={['edit', 'dragLineMarkerOptions', 'enabled']} valuePropName="checked">
+                  <Form.Item 
+                    label={
+                      <span>
+                        启用拖动边
+                        <Tooltip title="开启后可以拖动线段的中点进行编辑">
+                          <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                        </Tooltip>
+                      </span>
+                    } 
+                    name={['edit', 'dragLineMarkerOptions', 'enabled']} 
+                    valuePropName="checked"
+                  >
                     <Switch />
                   </Form.Item>
 
-                  <Form.Item label="拖动边颜色" name={['edit', 'dragLineMarkerOptions', 'dragMarkerStyle', 'fillColor']}>
+                  <Form.Item 
+                    label={
+                      <span>
+                        拖动边颜色
+                        <Tooltip title="拖动线段中点标记的颜色">
+                          <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                        </Tooltip>
+                      </span>
+                    } 
+                    name={['edit', 'dragLineMarkerOptions', 'dragMarkerStyle', 'fillColor']}
+                  >
                     <Input placeholder="颜色值，如: #3388ff" />
                   </Form.Item>
 
-                  <Form.Item label="拖动边位置比例" name={['edit', 'dragLineMarkerOptions', 'positionRatio']}>
+                  <Form.Item 
+                    label={
+                      <span>
+                        拖动边位置比例
+                        <Tooltip title="拖动标记在线段上的位置比例，0-1之间">
+                          <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                        </Tooltip>
+                      </span>
+                    } 
+                    name={['edit', 'dragLineMarkerOptions', 'positionRatio']}
+                  >
                     <InputNumber
                       min={0}
                       max={1}
@@ -382,11 +413,31 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange, onGeomet
               {/* 拖动中点标记配置 */}
               <Collapse size="small" ghost style={{ marginTop: 8 }}>
                 <Panel header="拖动中点标记" key="dragMidMarker">
-                  <Form.Item label="拖动中点颜色" name={['edit', 'dragMidMarkerOptions', 'dragMarkerStyle', 'fillColor']}>
+                  <Form.Item 
+                    label={
+                      <span>
+                        拖动中点颜色
+                        <Tooltip title="拖动线段中点标记的颜色">
+                          <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                        </Tooltip>
+                      </span>
+                    } 
+                    name={['edit', 'dragMidMarkerOptions', 'dragMarkerStyle', 'fillColor']}
+                  >
                     <Input placeholder="颜色值，如: #ff0000" />
                   </Form.Item>
 
-                  <Form.Item label="拖动中点位置比例" name={['edit', 'dragMidMarkerOptions', 'positionRatio']}>
+                  <Form.Item 
+                    label={
+                      <span>
+                        拖动中点位置比例
+                        <Tooltip title="拖动标记在线段中点的位置比例，0-1之间">
+                          <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                        </Tooltip>
+                      </span>
+                    } 
+                    name={['edit', 'dragMidMarkerOptions', 'positionRatio']}
+                  >
                     <InputNumber
                       min={0}
                       max={1}
@@ -401,15 +452,46 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange, onGeomet
               {/* 圆形虚线配置 */}
               <Collapse size="small" ghost style={{ marginTop: 8 }}>
                 <Panel header="圆形虚线" key="circleDashLine">
-                  <Form.Item label="启用虚线" name={['edit', 'circle_LinkRadiusAndCenterDashLineOptions', 'enabled']} valuePropName="checked">
+                  <Form.Item 
+                    label={
+                      <span>
+                        启用虚线
+                        <Tooltip title="开启后显示圆形虚线连接">
+                          <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                        </Tooltip>
+                      </span>
+                    } 
+                    name={['edit', 'circle_LinkRadiusAndCenterDashLineOptions', 'enabled']} 
+                    valuePropName="checked"
+                  >
                     <Switch />
                   </Form.Item>
 
-                  <Form.Item label="虚线颜色" name={['edit', 'circle_LinkRadiusAndCenterDashLineOptions', 'dashLineStyle', 'color']}>
+                  <Form.Item 
+                    label={
+                      <span>
+                        虚线颜色
+                        <Tooltip title="圆形虚线的颜色">
+                          <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                        </Tooltip>
+                      </span>
+                    } 
+                    name={['edit', 'circle_LinkRadiusAndCenterDashLineOptions', 'dashLineStyle', 'color']}
+                  >
                     <Input placeholder="颜色值，如: #666666" />
                   </Form.Item>
 
-                  <Form.Item label="虚线宽度" name={['edit', 'circle_LinkRadiusAndCenterDashLineOptions', 'dashLineStyle', 'weight']}>
+                  <Form.Item 
+                    label={
+                      <span>
+                        虚线宽度
+                        <Tooltip title="圆形虚线的线条宽度">
+                          <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                        </Tooltip>
+                      </span>
+                    } 
+                    name={['edit', 'circle_LinkRadiusAndCenterDashLineOptions', 'dashLineStyle', 'weight']}
+                  >
                     <InputNumber
                       min={0}
                       placeholder="像素值"
@@ -417,7 +499,17 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange, onGeomet
                     />
                   </Form.Item>
 
-                  <Form.Item label="虚线样式" name={['edit', 'circle_LinkRadiusAndCenterDashLineOptions', 'dashLineStyle', 'dashArray']}>
+                  <Form.Item 
+                    label={
+                      <span>
+                        虚线样式
+                        <Tooltip title="虚线的样式，如: '5, 10'">
+                          <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                        </Tooltip>
+                      </span>
+                    } 
+                    name={['edit', 'circle_LinkRadiusAndCenterDashLineOptions', 'dashLineStyle', 'dashArray']}
+                  >
                     <Input placeholder="如: '5, 10'" />
                   </Form.Item>
                 </Panel>
