@@ -4,6 +4,8 @@ import 'antd/dist/antd.css';
 import PointEditorTab from './components/tabs/PointEditorTab';
 import PolylineEditorTab from './components/tabs/PolylineEditorTab';
 import PolygonEditorTab from './components/tabs/PolygonEditorTab';
+import RectangleEditorTab from './components/tabs/RectangleEditorTab';
+import CircleEditorTab from './components/tabs/CircleEditorTab';
 
 function App() {
   const tabItems = [
@@ -25,12 +27,12 @@ function App() {
     {
       key: '4',
       label: '矩形编辑器',
-      children: '矩形编辑器内容开发中...',
+      children: <RectangleEditorTab />,
     },
     {
       key: '5',
       label: '圆编辑器',
-      children: '圆编辑器内容开发中...',
+      children: <CircleEditorTab />,
     },
     {
       key: '6',

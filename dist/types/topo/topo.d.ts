@@ -1,16 +1,22 @@
 import * as L from 'leaflet';
-import PolylineEditor from '../editor/polylineEditor';
-import { ReshapeOptions, TopoClipResult, TopoMergeResult, TopoReshapeFeatureResult } from '../types';
+import AuxiliaryLine from '../utils/drawAuxiliaryLine';
+import { type ReshapeOptions, type TopoClipResult, type TopoMergeResult, type TopoOptions, type TopoReshapeFeatureResult } from '../types';
 export declare class LeafletTopology {
     private static instance;
     private map;
-    drawLineLayer: PolylineEditor | null;
+    drawLineLayer: AuxiliaryLine | null;
     private selectedLayers;
     private clickHandler;
     private drawLineListener;
     private isPicking;
-    constructor(map: L.Map);
+    private topoOptions;
+    constructor(map: L.Map, options?: TopoOptions);
     static getInstance(map: L.Map): LeafletTopology;
+    getTopoOptions(): TopoOptions;
+    setTopoOptions(options: TopoOptions): {
+        precision?: number;
+        circleStep?: number;
+    };
     /** 选择图层
      *
      *
@@ -37,6 +43,7 @@ export declare class LeafletTopology {
      * @memberof LeafletTopology
      */
     private addHighLightLayerByPickLayerGeom;
+    private validIsCircle;
     private disableMapOpt;
     private enableMapOpt;
     /**

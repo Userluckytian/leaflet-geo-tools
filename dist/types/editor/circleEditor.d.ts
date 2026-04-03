@@ -25,6 +25,12 @@ export default class CircleEditor extends BaseEditor<L.Circle> {
     protected initLayer(geometry?: GeoJSON.Geometry): void;
     protected bindMapEvents(map: L.Map): void;
     protected offMapEvents(map: L.Map): void;
+    /** 返回图层的空间信息
+     *
+     *
+     * @memberof LeafletEditPolygon
+     */
+    getGeoJSON(FittingPointNum?: number): import("geojson").Feature<import("geojson").Polygon, import("geojson").GeoJsonProperties>;
     /**  地图点击事件，用于设置点的位置
      *
      *
@@ -84,7 +90,6 @@ export default class CircleEditor extends BaseEditor<L.Circle> {
      * @memberof BaseEditor
      */
     protected canConsume(e: L.LeafletMouseEvent): boolean;
-    private isPointInCircle;
     /** 使用 turf.booleanValid 校验圆形有效性
      *
      *

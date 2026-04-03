@@ -1,7 +1,8 @@
 import { type Units } from '@turf/turf';
 import * as L from 'leaflet';
-import { PolygonEditorState } from '../types';
+import { EditorState } from '../types';
 export type distanceOptions = {
+    coordPrecision?: number;
     units?: Units;
     precision?: number;
     lang?: 'en' | 'zh';
@@ -88,7 +89,7 @@ export default class LeafletDistance {
      * 担心用户在绘制后，想要获取到点位的经纬度信息，遂提供吐出geojson的方法
      * @memberof LeafletDistance
      */
-    geojson(): import("geojson").Feature<import("geojson").LineString | import("geojson").MultiLineString, any>;
+    geojson(precision?: number | false): import("geojson").Feature<import("geojson").LineString | import("geojson").MultiLineString, any>;
     /** 销毁图层，从地图中移除图层
      *
      *
@@ -150,14 +151,14 @@ export default class LeafletDistance {
     /** 【外部使用】的监听器，用于监听状态改变事件
      *
      *
-     * @param {(state: PolygonEditorState) => void} listener
+     * @param {(state: EditorState) => void} listener
      * @memberof LeafletDistance
      */
-    onStateChange(listener: (state: PolygonEditorState) => void): void;
+    onStateChange(listener: (state: EditorState) => void): void;
     /** 添加移除单个监听器的方法
      *
      */
-    offStateChange(listener: (state: PolygonEditorState) => void): void;
+    offStateChange(listener: (state: EditorState) => void): void;
     /** 清空所有状态监听器
      *
      */
