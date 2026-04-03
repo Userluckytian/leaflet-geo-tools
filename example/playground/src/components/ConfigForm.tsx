@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Form, InputNumber, Switch, Select, Input, Button, Space, Collapse, Card, ColorPicker } from 'antd';
+import { Form, InputNumber, Switch, Select, Input, Button, Space, Collapse, Card } from 'antd';
 import type { LeafletEditorOptions } from 'leaflet-geo-tools';
 
 const { Panel } = Collapse;
