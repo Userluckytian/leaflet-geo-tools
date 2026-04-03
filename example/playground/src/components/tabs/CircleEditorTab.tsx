@@ -6,29 +6,12 @@ import { CircleEditor } from 'leaflet-geo-tools';
 
 const CircleEditorTab: React.FC = () => {
   const editorRef = React.useRef<CircleEditor | null>(null);
+  const mapRef = React.useRef<L.Map | null>(null);
 
   const handleMapReady = (map: L.Map) => {
     console.log('Circle Editor Map Ready:', map);
-    
-    // 创建圆形编辑器实例
-    const editor = new CircleEditor(map, {
-      defaultGeometry: getDefaultGeometry(),
-      validation: {
-        allowSelfIntersect: false
-      },
-      edit: {
-        enabled: true
-      },
-      defaultStyle: {
-        color: '#3388ff',
-        weight: 3,
-        opacity: 0.8,
-        fillOpacity: 0.2,
-        radius: 500 // 默认半径500米
-      }
-    });
-    
-    editorRef.current = editor;
+    mapRef.current = map;
+    // 不立即创建编辑器，等待用户点击开始绘制
   };
 
   const handleConfigChange = (config: LeafletEditorOptions) => {
@@ -49,12 +32,70 @@ const CircleEditorTab: React.FC = () => {
     };
   };
 
+  // 开始绘制
+  const handleStartDrawing = () => {
+    if (!mapRef.current || editorRef.current) return;
+    
+    console.log('开始绘制圆形');
+    const editor = new CircleEditor(mapRef.current, {
+      validation: {
+        allowSelfIntersect: false
+      },
+      edit: {
+        enabled: true
+      },
+      defaultStyle: {
+        color: '#3388ff',
+        weight: 3,
+        opacity: 0.8,
+        fillOpacity: 0.2,
+        radius: 500 // 默认半径500米
+      }
+    });
+    
+    // 添加状态监听
+    editor.onStateChange((status) => {
+      console.log('Circle Editor State Changed:', status);
+      
+      if (status === 'drawing') {
+        console.log('Drawing状态: 停止绘制按钮应该是亮的');
+      } else if (status === 'editing') {
+        console.log('Editing状态: 停止绘制按钮应该是亮的');
+      } else if (status === 'idle' || status === 'Idle') {
+        console.log('Idle状态: 判断是否存在实例，且获取实例的图层，如果存在，则清除几何的按钮应该是亮的');
+      }
+    });
+    
+    editorRef.current = editor;
+  };
+
+  // 停止绘制
+  const handleStopDrawing = () => {
+    if (editorRef.current) {
+      console.log('停止绘制圆形');
+      (editorRef.current as any).commitEdit();
+    }
+  };
+
+  // 清除几何
+  const handleClearGeometry = () => {
+    if (editorRef.current) {
+      console.log('清除圆形几何');
+      editorRef.current.destroy();
+      editorRef.current = null;
+    }
+  };
+
   return (
     <BaseTab 
       title="圆形编辑器" 
       onMapReady={handleMapReady}
       onConfigChange={handleConfigChange}
       onGeometryLoad={handleGeometryLoad}
+      editorInstance={editorRef}
+      onStartDrawing={handleStartDrawing}
+      onStopDrawing={handleStopDrawing}
+      onClearGeometry={handleClearGeometry}
     />
   );
 };
