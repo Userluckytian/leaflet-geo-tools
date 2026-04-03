@@ -4,9 +4,8 @@
   flex-direction: column;
 
   .tab-content {
-    flex: 1;
+    height: calc(100vh - 61px);
     display: flex;
-    height: 100%;
 
     .left-panel {
       width: 300px;
@@ -16,6 +15,7 @@
       padding: 16px;
       overflow-y: auto;
       box-sizing: border-box;
+      height: calc(100vh - 93px);
     }
 
     .right-panel {
@@ -24,6 +24,7 @@
       padding: 16px;
       overflow: hidden;
       box-sizing: border-box;
+      height: calc(100vh - 93px);
     }
   }
 }
@@ -37,11 +38,14 @@
   .ant-tabs-nav {
     margin: 0;
     flex-shrink: 0;
+    height: 60px;
+    min-height: 60px;
   }
 
   .ant-tabs-content-holder {
     flex: 1;
     overflow: hidden;
+    height: calc(100vh - 61px);
   }
 
   .ant-tabs-content {
@@ -56,7 +60,7 @@
 
 // 地图容器样式
 .map-wrapper {
-  height: calc(100% - 32px);
+  height: calc(100vh - 93px);
   width: calc(100% - 32px);
   overflow: hidden;
 }
