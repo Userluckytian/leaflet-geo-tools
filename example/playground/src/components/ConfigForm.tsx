@@ -52,7 +52,6 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange }) => {
                   min={0}
                   max={10}
                   placeholder="默认值: 6"
-                  style={{ width: 'calc(100% - 120px)', minWidth: '200px' }}
                 />
               </Form.Item>
 
@@ -60,7 +59,6 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange }) => {
                 <TextArea
                   rows={3}
                   placeholder="GeoJSON格式的默认几何信息"
-                  style={{ width: 'calc(100% - 120px)', minWidth: '200px' }}
                 />
               </Form.Item>
             </Panel>
@@ -70,14 +68,13 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange }) => {
           <Collapse size="small" ghost>
             <Panel header="吸附配置" key="snap">
               <Form.Item label="启用吸附" name={['snap', 'enabled']} valuePropName="checked">
-                <Switch style={{ width: 'calc(100% - 120px)', minWidth: '200px' }} />
+                <Switch />
               </Form.Item>
 
               <Form.Item label="吸附模式" name={['snap', 'modes']}>
                 <Select
                   mode="multiple"
                   placeholder="选择吸附模式"
-                  style={{ width: 'calc(100% - 120px)', minWidth: '200px' }}
                   options={[
                     { label: '顶点吸附', value: 'vertex' },
                     { label: '边吸附', value: 'edge' }
@@ -89,7 +86,6 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange }) => {
                 <InputNumber
                   min={0}
                   placeholder="像素值，默认值: 10"
-                  style={{ width: 'calc(100% - 120px)', minWidth: '200px' }}
                 />
               </Form.Item>
 
@@ -101,26 +97,24 @@ const ConfigForm: React.FC<ConfigFormProps> = ({ title, onConfigChange }) => {
               <Collapse size="small" ghost style={{ marginTop: 8 }}>
                 <Panel header="高亮样式" key="snapHighlight">
                   <Form.Item label="点高亮颜色" name={['snap', 'highlight', 'pointStyle', 'fillColor']}>
-                    <Input placeholder="颜色值，如: #ff7800" style={{ width: 'calc(100% - 120px)', minWidth: '200px' }} />
+                    <Input placeholder="颜色值，如: #ff7800" />
                   </Form.Item>
 
                   <Form.Item label="点高亮半径" name={['snap', 'highlight', 'pointStyle', 'radius']}>
                     <InputNumber
                       min={0}
                       placeholder="像素值"
-                      style={{ width: 'calc(100% - 120px)', minWidth: '200px' }}
                     />
                   </Form.Item>
 
                   <Form.Item label="边高亮颜色" name={['snap', 'highlight', 'edgeStyle', 'color']}>
-                    <Input placeholder="颜色值，如: #3388ff" style={{ width: 'calc(100% - 120px)', minWidth: '200px' }} />
+                    <Input placeholder="颜色值，如: #3388ff" />
                   </Form.Item>
 
                   <Form.Item label="边高亮宽度" name={['snap', 'highlight', 'edgeStyle', 'weight']}>
                     <InputNumber
                       min={0}
                       placeholder="像素值"
-                      style={{ width: 'calc(100% - 120px)', minWidth: '200px' }}
                     />
                   </Form.Item>
                 </Panel>
