@@ -262,6 +262,8 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
             }
             // 1：一个点也没有时，我们移动事件，也什么也不做。
             if (!this.tempCoords.length) return;
+            // 实时更新鼠标当前位置，用于撤销时恢复预览线
+            this.lastMoveCoord = lastMoveEndPoint;
             // 2：构建临时坐标点数组。
             tempMovedCoords = [...tempMovedCoords, lastMoveEndPoint];
             // 绘制状态下的特殊校验
@@ -341,6 +343,7 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
 
             // 修复：检查是否还有剩余点
             if (this.tempCoords.length > 0) {
+                // 使用鼠标当前位置作为预览线的终点
                 const finalCoords = [...this.tempCoords, this.lastMoveCoord];
                 // 绘制状态下的校验，允许1个点的情况
                 const isValid = this.isValidForDrawing(finalCoords);

@@ -1,9 +1,11 @@
 import * as L from 'leaflet';
 import { queryLayerOnClick, queryLayersIntersectingGeometry } from '../utils/commonUtils';
+
 import { clipSelectedLayersByLine, mergePolygon, reshapeSelectedLayersByLine } from '../utils/topoUtils';
-import AuxiliaryLine from '../utils/drawAuxiliaryLine';
 import { EditorState, type ReshapeOptions, type TopoClipResult, type TopoMergeResult, type TopoOptions, type TopoReshapeFeatureResult } from '../types';
 import { circle } from '@turf/turf';
+import AuxiliaryLine from '../utils/drawAuxiliaryLine';
+
 
 export class LeafletTopology {
   private static instance: LeafletTopology;
