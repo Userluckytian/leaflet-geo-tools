@@ -49,6 +49,7 @@ export type ValidationOptions = {
     validErrorPolygonStyle?: L.PolylineOptions;
     validErrorLineStyle?: L.PolylineOptions;
     validErrorPointStyle?: L.MarkerOptions;
+    circle_minRadius?: number;
 };
 export type DragMarkerOptions = {
     enabled: boolean;

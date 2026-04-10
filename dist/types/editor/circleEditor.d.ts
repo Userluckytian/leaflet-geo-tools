@@ -4,7 +4,6 @@ import * as L from 'leaflet';
 export default class CircleEditor extends BaseEditor<L.Circle> {
     protected midpointMarkers: MidpointPair[];
     protected updateMidpoints(skipMarker?: L.Marker): void;
-    protected reBuildMarkerAndRender(coordinatesArray: any): void;
     protected vertexMarkers: L.Marker[];
     protected historyStack: number[][][];
     protected redoStack: any[];
@@ -25,6 +24,7 @@ export default class CircleEditor extends BaseEditor<L.Circle> {
     protected initLayer(geometry?: GeoJSON.Geometry): void;
     protected bindMapEvents(map: L.Map): void;
     protected offMapEvents(map: L.Map): void;
+    protected reBuildMarkerAndRender(coordinatesArray: number[][]): void;
     /** 返回图层的空间信息
      *
      *

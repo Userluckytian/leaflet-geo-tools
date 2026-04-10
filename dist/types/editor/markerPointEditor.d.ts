@@ -26,6 +26,14 @@ export default class MarkerPointEditor extends BaseEditor<L.Marker> {
      * @memberof markerPoint
      */
     private mapClickEvent;
+    /**  地图鼠标移动事件，用于设置点的位置
+     *
+     *
+     * @private
+     * @param {L.LeafletMouseEvent} e
+     * @memberof markerPoint
+     */
+    private mapMouseMoveEvent;
     /** 状态重置
      *
      *

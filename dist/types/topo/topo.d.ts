@@ -1,6 +1,6 @@
 import * as L from 'leaflet';
-import AuxiliaryLine from '../utils/drawAuxiliaryLine';
 import { type ReshapeOptions, type TopoClipResult, type TopoMergeResult, type TopoOptions, type TopoReshapeFeatureResult } from '../types';
+import AuxiliaryLine from '../utils/drawAuxiliaryLine';
 export declare class LeafletTopology {
     private static instance;
     private map;

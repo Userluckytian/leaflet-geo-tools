@@ -2,7 +2,6 @@ import * as L from 'leaflet';
 import { BaseEditor } from "../base/BaseEditor";
 import { type LeafletEditorOptions, type MidpointPair } from "../types";
 export default class PolylineEditor extends BaseEditor<L.Polyline> {
-    protected reBuildMarkerAndRender(coordinatesArray: any): void;
     protected historyStack: number[][][][];
     private tempCoords;
     private lastMoveCoord;
@@ -55,15 +54,6 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
      * @memberof LeafletPolyLine
      */
     private mapMouseMoveEvent;
-    /** 校验线图层的有效性
-     *
-     *
-     * @private
-     * @param {L.LatLng[]} coords
-     * @return {*}  {boolean}
-     * @memberof LeafletRectangle
-     */
-    private isValidPolyline;
     /** 显示图层
      *
      *
@@ -141,4 +131,27 @@ export default class PolylineEditor extends BaseEditor<L.Polyline> {
     private createEdgeDragMarker;
     private renderLayerFromMarkers;
     private pushHistoryFromMarkers;
+    /** 根据坐标重建 marker 和图形 + 重新渲染图层(在基类中使用的)
+     *
+     * @param latlngs 坐标数组
+     */
+    protected reBuildMarkerAndRender(latlngs: number[][][]): void;
+    /** 校验线图层的有效性
+     *
+     *
+     * @private
+     * @param {number[][][]} multiLine_coords 多线坐标
+     * @return {*}  {boolean}
+     * @memberof PolylineEditor
+     */
+    private isValidPolyline;
+    /** 绘制状态下的校验，允许只有1个点的情况
+     *
+     *
+     * @private
+     * @param {number[][]} coords 单条线的坐标
+     * @return {*}  {boolean}
+     * @memberof PolylineEditor
+     */
+    private isValidForDrawing;
 }

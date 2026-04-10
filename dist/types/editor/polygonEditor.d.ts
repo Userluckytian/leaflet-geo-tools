@@ -40,7 +40,7 @@ export default class PolygonEditor extends BaseEditor<L.Polygon> {
      * @memberof BasePolygonEditor
      */
     protected removeAllMidPointMarkers(skipMarker?: L.Marker): void;
-    /** 根据坐标重建 marker 和图形 + 重新渲染图层(未使用)
+    /** 根据坐标重建 marker 和图形 + 重新渲染图层(在基类中使用的)
      *
      * @param latlngs 坐标数组
      */
@@ -100,10 +100,18 @@ export default class PolygonEditor extends BaseEditor<L.Polygon> {
      *
      *
      * @private
-     * @param {L.LatLng[]} coords
+     * @param {number[][] | number[][][] | number[][][][]} coords 单面、多面或多面多环坐标
      * @return {*}  {boolean}
      */
     private isValidPolygon;
+    /** 绘制状态下的校验，允许少于3个点的情况
+     *
+     *
+     * @private
+     * @param {number[][]} coords 单个面的坐标
+     * @return {*}  {boolean}
+     */
+    private isValidForDrawing;
     /** 完成绘制（结束绘制）
      *
      *
@@ -112,6 +120,11 @@ export default class PolygonEditor extends BaseEditor<L.Polygon> {
      * @memberof LeafletPolygonEditor
      */
     private finishedDraw;
+    /** 完成编辑（退出编辑模式）
+     *
+     * @protected
+     */
+    protected commitEdit(): void;
     /** 进入编辑模式
      *
      * @private
