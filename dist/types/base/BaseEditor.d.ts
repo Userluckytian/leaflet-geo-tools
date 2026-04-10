@@ -312,6 +312,10 @@ export declare abstract class BaseEditor<T extends L.Layer> {
     /** 停用当前编辑器实例
      *
      */
+    protected getCurrentState(): EditorState;
+    /** 停用当前编辑器实例
+     *
+     */
     protected deactivate(): void;
     /** 检查当前实例是否激活
      *

@@ -7,14 +7,14 @@ import * as L from 'leaflet';
  * @param {L.LeafletMouseEvent} e 点击事件回调参数e
  * @return {*}
  */
-export declare function queryLayerOnClick(map: L.Map, e: L.LeafletMouseEvent): any[];
+export declare function queryLayerOnClick(map: L.Map, e: L.LeafletMouseEvent, precision?: number | false): any[];
 /**
  * 查询与给定几何（线或面）相交的图层
  * @param map 地图实例
  * @param geometry 用户绘制的线或面（GeoJSON Feature 或 Leaflet 图层）
  * @returns 与之相交的图层数组
  */
-export declare function queryLayersIntersectingGeometry(map: L.Map, geometry: GeoJSON.Feature | L.Polyline | L.Polygon): any[];
+export declare function queryLayersIntersectingGeometry(map: L.Map, geometry: GeoJSON.Feature | L.Polyline | L.Polygon, precision?: number | false): any[];
 /** 动态生成marker图标(天地图应该是构建的点图层+marker图层两个)
  *
  *
@@ -86,10 +86,14 @@ export declare function reversePolyLineLatLngs(geometry: GeoJSON.Geometry): numb
      * @return {*}  {boolean}
      * @memberof LeafletEditRectangle
      */
-export declare function isClickOnLayer(e: L.LeafletMouseEvent, layer: L.Polygon | L.Rectangle | L.Circle | L.Polyline): boolean;
+export declare function isClickOnLayer(e: L.LeafletMouseEvent, layer: L.Polygon | L.Rectangle | L.Circle | L.Polyline, precision?: number | false): boolean;
 /** turf的校验有效性，同时增强，因为要同步进行坐标的范围进行校验
  *
  * @param geom
  * @returns
  */
 export declare function booleanValidEnhance(geom: any): boolean;
+/**
+ * 递归处理 GeoJSON 对象，降级 Multi 类型
+ */
+export declare function downgradeGeometry(data: GeoJSON.Geometry | GeoJSON.Feature | GeoJSON.FeatureCollection): GeoJSON.Geometry | GeoJSON.Feature | GeoJSON.FeatureCollection;

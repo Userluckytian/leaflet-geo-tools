@@ -6,6 +6,7 @@ import { LeafletTopology } from "../topo/topo";
 
 
 
+
 export abstract class BaseEditor<T extends L.Layer> {
 
     protected map: L.Map; // 地图实例（编辑器本身是不需要的，奈何其他的都继承自它，索性直接在这里定义好了）
@@ -762,6 +763,16 @@ export abstract class BaseEditor<T extends L.Layer> {
 
         // 设置当前实例为激活状态
         BaseEditor.currentActiveEditor = this;
+    }
+
+
+    /** 停用当前编辑器实例
+     * 
+     */
+    protected getCurrentState(): EditorState {
+        // console.log('停用编辑器:', this.constructor.name);
+        return this.currentState;
+
     }
 
     /** 停用当前编辑器实例
