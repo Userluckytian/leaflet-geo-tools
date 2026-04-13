@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/leaflet-geo-tools.svg)](https://www.npmjs.com/package/leaflet-geo-tools)
 [![license](https://img.shields.io/npm/l/leaflet-geo-tools.svg)](https://github.com/Userluckytian/leaflet-geo-tools/blob/main/LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
-[![API 文档](https://img.shields.io/badge/API-Documentation-blue.svg)](https://github.com/Userluckytian/leaflet-geo-tools/blob/main/docs/API.md)
+[![API 文档](https://img.shields.io/badge/API-Documentation-blue.svg)](https://github.com/Userluckytian/leaflet-geo-tools/blob/main/docs)
 <!-- [![npm download](https://img.shields.io/npm/dm/leaflet-geo-tools.svg?style=flat-round)](https://www.npmjs.com/package/leaflet-geo-tools) -->
 
 > 基于 Leaflet 的增强型 GIS 工具库，提供专业的绘制、编辑、测量和拓扑操作功能。
