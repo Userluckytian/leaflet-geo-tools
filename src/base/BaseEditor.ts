@@ -1049,14 +1049,14 @@ export abstract class BaseEditor<T extends L.Layer> {
         this.options = Object.assign(this.options, options);
         if (this.map) {
             // 1、编辑器是否启用吸附功能(初始化吸附控制器，设置吸附模式、吸附范围阈值、吸附高亮配置等)
-            if (options?.snap?.enabled) {
+            if (options?.snap) {
                 // 初始化吸附控制器 
                 this.snapHighlightLayer = L.layerGroup().addTo(map);
                 this.initSnap(map, options?.snap);
             }
 
             // 2、编辑器是否启用编辑功能( 子类可能扩充这个内容，initEditOptions还是放在子类中调用吧)
-            if (options?.edit?.enabled) {
+            if (options?.edit) {
                 this.initEditOptions(options?.edit);
             }
 
